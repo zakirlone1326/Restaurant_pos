@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KOSHUR POS | Table {{ table.table_number }}</title>
+    <style>
+        :root {
+            --primary-saffron: #f97316; 
+            --primary-dark: #1e293b;   
+            --bg-light: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-main: #334155;
+            --danger: #ef4444;
+            --success: #10b981;
+            --pending: #f59e0b;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; background-color: var(--bg-light); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; 
+        }
+        
+        header { 
+            background: var(--primary-dark); color: white; padding: 10px 25px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+
+        .main-wrapper { display: flex; flex: 1; height: calc(100vh - 60px); overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar-cats { width: 180px; background: #fff; border-right: 1px solid var(--border-color); overflow-y: auto; }
+        .cat-item { 
+            width: 100%; text-align: left; padding: 14px 18px; border: none; background: none;
+            color: #64748b; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-weight: 600; transition: 0.2s;
+        }
+        .cat-item.active { background: #fff7ed; color: var(--primary-saffron); border-left: 4px solid var(--primary-saffron); }
+
+        /* --- FOOD GRID --- */
+        .menu-area { 
+            flex: 1; padding: 15px; display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
+            gap: 10px; overflow-y: auto; align-content: start;
+        }
+        .food-card { 
+            background: #fff; border: 1px solid var(--border-color); padding: 10px;
+            border-radius: 10px; cursor: pointer; text-align: center; 
+            display: flex; flex-direction: column; justify-content: space-between;
+            min-height: 90px; transition: 0.1s;
+        }
+        .food-card h4 { margin: 0 0 5px 0; font-size: 0.85rem; font-weight: 600; color: var(--primary-dark); }
+        .price-tag { color: var(--primary-saffron); font-weight: 700; font-size: 1rem; }
+
+        /* --- ORDER PANEL --- */
+        .order-panel { width: 400px; background: white; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .items-scroll { flex: 1; overflow-y: auto; padding: 12px; background: #fafafa; }
+        .bill-row { background: #fff; padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eef2f6; }
+        .item-name-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; }
+
+        /* --- TYPE & PAYMENT --- */
+        .type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px; border-top: 1px solid #f1f5f9; }
+        .type-btn { padding: 12px 2px; border: 1px solid #e2e8f0; background: #fff; border-radius: 8px; font-weight: 700; font-size: 0.7rem; cursor: pointer; color: #64748b; }
+        .type-btn.active { background-color: var(--primary-saffron) !important; color: white !important; border-color: var(--primary-saffron) !important; }
+
+        .payment-section { padding: 0 15px 15px 15px; display: flex; flex-direction: column; gap: 8px; }
+        .row-group { display: flex; gap: 8px; }
+        .payment-select { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-weight: 600; color: var(--primary-dark); cursor: pointer; }
+        .gst-btn { padding: 0 15px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; font-weight: 700; cursor: pointer; font-size: 0.7rem; }
+        .gst-btn.active { background: var(--success); color: white; border-color: var(--success); }
+
+        .total-box { background: #f8fafc; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 1.6rem; font-weight: 700; margin: 0 15px 15px 15px; }
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 15px 20px 15px; }
+        .btn { padding: 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.75rem; color: white; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* --- MODAL STYLES --- */
+        .modal-overlay { 
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); 
+            display:none; align-items:center; justify-content:center; z-index: 1000;
+        }
+        .modal-content { 
+            background: white; padding: 25px; border-radius: 15px; width: 320px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+        }
+        .modal-content h3 { margin-top: 0; color: var(--primary-dark); }
+        .modal-content input, .modal-content select { 
+            width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; 
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'table_dashboard' %}" style="color:white; text-decoration:none; font-size:0.75rem; font-weight:600; border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:5px;">EXIT</a>
+            <h2 style="margin:0; font-size: 1.2rem;">TABLE {{ table.table_number }}</h2>
+        </div>
+        <span id="payment-status-tag" style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; padding: 4px 10px; border-radius: 4px;">KOSHUR POS • PREMIUM</span>
+    </header>
+
+    <div class="main-wrapper">
+        <aside class="sidebar-cats" id="cat-nav"></aside>
+        <main class="menu-area" id="food-grid"></main>
+
+        <aside class="order-panel">
+            <div class="items-scroll" id="order-list"></div>
+
+            <div class="type-grid">
+                <button onclick="setOrderType('DINE_IN')" id="type-DINE_IN" class="type-btn">DINE IN</button>
+                <button onclick="setOrderType('PICK_UP')" id="type-PICK_UP" class="type-btn">PICK UP</button>
+                <button onclick="setOrderType('DELIVERY')" id="type-DELIVERY" class="type-btn">DELIVERY</button>
+            </div>
+
+            <div class="payment-section">
+                <div class="row-group">
+                    <select id="payment-mode" class="payment-select">
+                        <option value="CASH">CASH PAYMENT</option>
+                        <option value="UPI">UPI / QR CODE</option>
+                        <option value="CARD">CARD PAYMENT</option>
+                    </select>
+                    <button onclick="toggleGST()" id="gst-toggle" class="gst-btn">GST</button>
+                </div>
+                <select id="payment-target-status" class="payment-select" style="background: #fffbeb; border-color: #fcd34d;">
+                    <option value="PAID">SETTLE AS PAID (CLEAR TABLE)</option>
+                    <option value="PENDING">MARK AS PENDING (KEEP TABLE)</option>
+                </select>
+            </div>
+
+            <div class="total-box">
+                <span style="font-size: 0.75rem; color: #64748b;">GRAND TOTAL</span>
+                <span id="total-val">₹0.00</span>
+            </div>
+
+            <div class="action-btns">
+                <button onclick="printKOT()" class="btn" style="background:#475569;">PRINT KOT</button>
+                <button onclick="printBill()" class="btn" style="background:#6366f1;">PRINT BILL</button>
+                <button onclick="openDiscountModal()" class="btn" style="background:#0ea5e9;">DISCOUNT</button>
+                <button onclick="settleBill()" class="btn" style="background:var(--primary-saffron); font-size: 0.85rem;">SETTLE BILL</button>
+                <button onclick="confirmCancel()" class="btn" style="background:var(--danger); font-size: 0.85rem;">CANCEL ORDER</button>
+            </div>
+        </aside>
+    </div>
+
+    <div id="discountModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Apply Discount</h3>
+            <select id="discount-type">
+                <option value="FIXED">Fixed Amount (₹)</option>
+                <option value="PERCENT">Percentage (%)</option>
+            </select>
+            <input type="number" id="discount-val" placeholder="Enter Value">
+            <input type="text" id="discount-note" placeholder="Note (Optional)">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button onclick="applyDiscount()" class="btn" style="background:var(--success); flex:1;">Apply</button>
+                <button onclick="closeModal()" class="btn" style="background:#64748b; flex:1;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tableId = "{{ table.id }}";
+        let isUpdatingType = false;
+        const getCSRF = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+        document.addEventListener('DOMContentLoaded', () => { initMenu(); syncOrder(); });
+
+        async function initMenu() {
+            const res = await fetch('/table/menu/'); 
+            const data = await res.json();
+            const nav = document.getElementById('cat-nav');
+            nav.innerHTML = data.menu.map((cat, idx) => `
+                <button onclick="renderMenu('${cat.category_name}')" class="cat-item" id="cat-${idx}">${cat.category_name}</button>
+            `).join('');
+            if(data.menu.length > 0) renderMenu(data.menu[0].category_name);
+        }
+
+        async function renderMenu(catName) {
+            const res = await fetch('/table/menu/');
+            const data = await res.json();
+            const grid = document.getElementById('food-grid');
+            const category = data.menu.find(c => c.category_name === catName);
+            grid.innerHTML = category.items.map(item => `
+                <div onclick="addFood(${item.id})" class="food-card">
+                    <h4>${item.name}</h4>
+                    <div class="price-tag">₹${item.price}</div>
+                </div>
+            `).join('');
+            document.querySelectorAll('.cat-item').forEach(btn => btn.classList.toggle('active', btn.innerText.trim() === catName));
+        }
+
+        async function addFood(itemId) {
+            const fd = new FormData();
+            fd.append('table_id', tableId);
+            fd.append('menu_item_id', itemId);
+            const response = await fetch('/table/add-item/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            if(response.ok) syncOrder();
+        }
+
+        async function syncOrder() {
+            const res = await fetch(`/table/${tableId}/status/`);
+            const data = await res.json();
+            
+            const list = document.getElementById('order-list');
+            const tag = document.getElementById('payment-status-tag');
+            
+            if(!data.active || !data.items || data.items.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:#94a3b8; margin-top:50px;">Empty Cart</div>';
+                document.getElementById('total-val').innerText = '₹0.00';
+                tag.style.background = "none";
+                tag.innerText = "KOSHUR POS • PREMIUM";
+                return;
+            }
+
+            // Update Status Tag
+            if(data.payment_status === 'PENDING') {
+                tag.innerText = "PAYMENT PENDING";
+                tag.style.background = "var(--pending)";
+                tag.style.color = "white";
+            }
+
+            list.innerHTML = data.items.map(i => `
+                <div class="bill-row">
+                    <div class="item-name-row"><span>${i.name}</span><span>₹${i.price}</span></div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button onclick="changeQty(${i.id}, 'minus')" style="width:24px; height:24px;">-</button>
+                        <span>${i.qty}</span>
+                        <button onclick="addFood(${i.menu_item_id})" style="width:24px; height:24px;">+</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('total-val').innerText = `₹${parseFloat(data.grand_total).toFixed(2)}`;
+            
+            const gstBtn = document.getElementById('gst-toggle');
+            gstBtn.classList.toggle('active', data.apply_gst);
+
+            if (!isUpdatingType) {
+                document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`type-${data.order_type || 'DINE_IN'}`);
+                if(activeBtn) activeBtn.classList.add('active');
+            }
+        }
+
+        async function toggleGST() {
+            const res = await fetch(`/table/${tableId}/toggle-gst/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()} });
+            if(res.ok) syncOrder();
+        }
+
+        function openDiscountModal() { document.getElementById('discountModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('discountModal').style.display = 'none'; }
+
+        async function applyDiscount() {
+            const fd = new FormData();
+            fd.append('discount_value', document.getElementById('discount-val').value);
+            fd.append('discount_type', document.getElementById('discount-type').value);
+            fd.append('discount_note', document.getElementById('discount-note').value);
+            
+            const res = await fetch(`/table/${tableId}/apply-discount/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            if(res.ok) { closeModal(); syncOrder(); }
+        }
+
+        async function confirmCancel() {
+            const reason = prompt("Reason for cancellation?");
+            if(!reason) return;
+            const fd = new FormData();
+            fd.append('cancel_reason', reason);
+            const res = await fetch(`/table/${tableId}/cancel-order/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            if(res.ok) window.location.href = '/table/';
+        }
+
+        async function settleBill() {
+    const mode = document.getElementById('payment-mode').value;
+    const targetStatus = document.getElementById('payment-target-status').value; // Ensure this ID exists!
+    
+    const fd = new FormData();
+    fd.append('payment_mode', mode);
+    fd.append('payment_status', targetStatus); // Needs to be 'PAID' or 'PENDING'
+    
+    const res = await fetch(`/table/${tableId}/settle/`, { 
+        method: 'POST', 
+        headers: {'X-CSRFToken': getCSRF()}, 
+        body: fd 
+    });
+    if(res.ok) window.location.href = '/table/';
+}
+
+        async function setOrderType(type) {
+            isUpdatingType = true;
+            const fd = new FormData();
+            fd.append('table_id', tableId);
+            fd.append('order_type', type);
+            await fetch('/table/update-order-type/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            setTimeout(() => { isUpdatingType = false; syncOrder(); }, 300);
+        }
+
+        async function changeQty(id, action) {
+            const fd = new FormData();
+            fd.append('item_id', id);
+            await fetch('/table/delete-item/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            syncOrder();
+        }
+
+        function printKOT() { window.open(`/table/${tableId}/print-kot/`); }
+        function printBill() {
+    // Open the print invoice view in a new tab
+    window.open(`/table/${tableId}/print-invoice/`, '_blank');
+}
+    </script>
+</body>
+</html>

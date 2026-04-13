@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kashur POS | Dashboard</title>
+    <style>
+        /* --- KASHUR THEME: WHITE & DIM SAFFRON --- */
+        :root {
+            --primary-saffron: #f97316;
+            --primary-dark: #1e1e1e;
+            --bg-light: #f3f4f6;
+            --fab-color: #be123c;
+            --occupied-dim: #fed7aa; /* Dim Saffron */
+            --occupied-text: #92400e; /* Brown text for contrast */
+            --pending-color: #fbbf24; /* Amber for Pending Payment */
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            background-color: #ffffff; 
+            color: #374151; 
+        }
+        
+        .navbar { 
+            background-color: var(--primary-dark); 
+            color: white; 
+            padding: 1rem 2rem; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        .navbar h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+        .navbar h1 span { color: var(--primary-saffron); }
+        .nav-links a { color: #cbd5e1; text-decoration: none; margin-left: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        .nav-links a:hover { color: var(--primary-saffron); }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; padding-bottom: 100px; }
+        
+        .header-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: baseline; 
+            margin-bottom: 25px; 
+            border-bottom: 1px solid #d1d5db; 
+            padding-bottom: 10px; 
+        }
+        .header-row h2 { 
+            font-family: 'Times New Roman', Times, serif; 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            color: #6b7280; 
+            text-transform: uppercase; 
+        }
+        
+        .legend { display: flex; gap: 20px; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+        .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+
+        .table-card { 
+            height: 140px; 
+            border-radius: 12px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            background: #f3f4f6; 
+            border: 1px solid #d1d5db;
+            position: relative;
+        }
+        .table-card:hover { transform: translateY(-3px); border-color: var(--primary-saffron); }
+        
+        /* AVAILABLE STATE */
+        .AVAILABLE { background: #f3f4f6; color: #4b5563; }
+        
+        /* OCCUPIED STATE (Dining) */
+        .OCCUPIED { 
+            background: var(--occupied-dim) !important; 
+            color: var(--occupied-text) !important; 
+            border: 1px solid #fdba74; 
+        }
+        
+        /* BILLED/PENDING STATE (Money awaited) */
+        .BILLED { 
+            background: var(--pending-color); 
+            color: #78350f; 
+            border: 2px dashed #b45309;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        .table-number { font-size: 2.2rem; font-weight: 400; }
+        
+        .status-tag { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            font-size: 10px; 
+            font-weight: 700; 
+            background: rgba(255,255,255,0.4); 
+            padding: 3px 8px; 
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .table-status { font-size: 0.7rem; font-weight: 600; margin-top: 4px; opacity: 0.8; }
+        
+        .fab { 
+            position: fixed; 
+            bottom: 30px; 
+            right: 30px; 
+            background-color: var(--fab-color); 
+            color: white; 
+            text-decoration: none; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            padding: 14px 24px; 
+            border-radius: 50px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); 
+            font-weight: bold; 
+            font-size: 0.9rem; 
+            transition: 0.3s; 
+            z-index: 1000;
+        }
+        .fab:hover { transform: scale(1.05); background-color: #9f1239; }
+
+        .footer-note { text-align: center; margin-top: 50px; color: #9ca3af; font-size: 0.65rem; letter-spacing: 1px; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <h1>KOSHUR <span>POS</span></h1>
+        <div class="nav-links">
+            <a href="{% url 'staff_list' %}">Attendance</a>
+             <a href="/admin/analytics/">Reports</a>
+            <a href="/admin/">Settings</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header-row">
+            <h2>Floor Map | {{ restaurant_name }}</h2>
+            <div class="legend">
+                <span><span class="dot" style="background: #d1d5db;"></span> Available</span>
+                <span><span class="dot" style="background: var(--occupied-dim);"></span> Occupied</span>
+                <span><span class="dot" style="background: var(--pending-color);"></span> Payment Pending</span>
+            </div>
+        </div>
+
+        <div class="table-grid">
+            {% for table in tables %}
+            <div class="table-card {{ table.status }}" onclick="window.location.href='/table/{{ table.id }}/'">
+                
+                {% if table.status == 'OCCUPIED' or table.status == 'BILLED' %}
+                    <div class="status-tag timer-display" data-start="{{ table.start_time_iso }}">
+                        🕒 ...
+                    </div>
+                {% endif %}
+
+                <div class="table-number">T{{ table.table_number }}</div>
+                <div class="table-status">
+                    {% if table.status == 'BILLED' %}
+                        PAYMENT DUE
+                    {% else %}
+                        {{ table.get_status_display }}
+                    {% endif %}
+                </div>
+                
+                {% if table.status == 'OCCUPIED' %}
+                    <div style="position: absolute; bottom: 10px; right: 10px; font-size: 14px; font-weight: 900;">⋮</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="footer-note">
+            POWERED BY KASHUR POS • SMART MANAGEMENT SYSTEMS
+        </div>
+    </div>
+
+    <a href="/admin/core/pos/table/add/" class="fab">
+        <span>+</span> Add Table
+    </a>
+
+    <script>
+        function updateTimers() {
+            const timerElements = document.querySelectorAll('.timer-display');
+            
+            timerElements.forEach(el => {
+                const startTimeStr = el.getAttribute('data-start');
+                if (startTimeStr && startTimeStr !== "None") {
+                    const startTime = new Date(startTimeStr);
+                    const now = new Date();
+                    
+                    const diffMs = now - startTime;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    
+                    if (diffMins < 1) {
+                        el.innerHTML = "🕒 Just started";
+                    } else if (diffMins >= 60) {
+                        const hours = Math.floor(diffMins / 60);
+                        const mins = diffMins % 60;
+                        el.innerHTML = `🕒 ${hours}h ${mins}m running`;
+                    } else {
+                        el.innerHTML = "🕒 " + diffMins + "m running";
+                    }
+                }
+            });
+        }
+
+        updateTimers();
+        setInterval(updateTimers, 30000);
+    </script>
+
+</body>
+</html>

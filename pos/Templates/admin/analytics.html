@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ restaurant_name }} | Analytics</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; color: #333; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: 100%; }
+        .filter-bar { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; }
+        
+        /* Smaller text to fit 6 boxes horizontally */
+        .stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #6c757d; font-weight: 800; margin-bottom: 5px; }
+        .stat-value { font-size: 1.1rem; font-weight: 800; margin-bottom: 0; white-space: nowrap; }
+        .icon-small { font-size: 1rem; opacity: 0.2; float: right; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-4 px-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold m-0">📊 {{ restaurant_name }} Analytics</h3>
+        <a href="/admin/" class="btn btn-outline-dark btn-sm rounded-pill px-3">⬅ Admin</a>
+    </div>
+
+    <div class="filter-bar d-flex justify-content-between align-items-center">
+        <form method="GET" class="d-flex align-items-center gap-2">
+            <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm border-0 bg-light">
+            <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm border-0 bg-light">
+            <button type="submit" class="btn btn-primary btn-sm px-3 rounded-pill">Filter</button>
+        </form>
+        <div class="btn-group rounded-pill overflow-hidden shadow-sm">
+            <button onclick="setRange(7)" class="btn btn-white btn-sm border-end">7D</button>
+            <button onclick="setRange(30)" class="btn btn-white btn-sm">30D</button>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        
+        <div class="col-6">
+            <div class="row g-2">
+                <div class="col-4">
+                    <div class="card p-2 border-start border-4 border-success">
+                        <p class="stat-label">Revenue</p>
+                        <p class="stat-value text-success">₹{{ total_revenue|floatformat:0 }}</p>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card p-2 border-start border-4 border-danger">
+                        <p class="stat-label">Expenses</p>
+                        <p class="stat-value text-danger">₹{{ total_expenses|floatformat:0 }}</p>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card p-2 border-start border-4 {% if net_profit >= 0 %}border-primary{% else %}border-warning{% endif %}">
+                        <p class="stat-label">Profit</p>
+                        <p class="stat-value {% if net_profit >= 0 %}text-primary{% else %}text-warning{% endif %}">₹{{ net_profit|floatformat:0 }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="row g-2">
+                <div class="col-4">
+                    <div class="card p-2 border-start border-4 border-secondary">
+                        <p class="stat-label">Orders <span class="icon-small">📋</span></p>
+                        <p class="stat-value text-dark">{{ total_orders }}</p>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card p-2 border-start border-4 border-info">
+                        <p class="stat-label">Settled <span class="icon-small">✅</span></p>
+                        <p class="stat-value text-info">{{ completed_orders }}</p>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="card p-2 border-start border-4 border-warning">
+                        <p class="stat-label">Pending <span class="icon-small">⏳</span></p>
+                        <p class="stat-value text-warning">{{ pending_orders }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card p-4">
+                <h6 class="fw-bold mb-4">Cash Flow Trend</h6>
+                <div style="height: 300px;"><canvas id="revenueChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card p-4">
+                <h6 class="fw-bold mb-4">Top Selling Items</h6>
+                <div style="height: 300px;"><canvas id="topItemsChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setRange(days) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - (days - 1));
+        window.location.href = `?start_date=${start.toISOString().split('T')[0]}&end_date=${end.toISOString().split('T')[0]}`;
+    }
+
+    // Line Chart
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'line',
+        data: {
+            labels: {{ days|safe }},
+            datasets: [
+                { label: 'Revenue', data: {{ revenue_data|safe }}, borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.1)', fill: true, tension: 0.4 },
+                { label: 'Expenses', data: {{ expense_data|safe }}, borderColor: '#dc3545', backgroundColor: 'rgba(220, 53, 69, 0.1)', fill: true, tension: 0.4 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Doughnut Chart
+    new Chart(document.getElementById('topItemsChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ top_labels|safe }},
+            datasets: [{ data: {{ top_values|safe }}, backgroundColor: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+    });
+</script>
+
+</body>
+</html>

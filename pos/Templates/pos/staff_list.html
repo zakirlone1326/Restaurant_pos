@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Attendance | KOSHUR POS</title>
+    <style>
+        :root { --saffron: #f97316; --dark: #0f172a; --bg: #f8fafc; --success: #10b981; --danger: #be123c; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.05); }
+        h2 { border-left: 5px solid var(--saffron); padding-left: 15px; color: var(--dark); margin-bottom: 5px; }
+        .subtitle { color: #64748b; margin-bottom: 25px; font-size: 0.9rem; }
+        
+        .staff-grid { display: grid; gap: 15px; }
+        .staff-card { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px 20px; border: 1px solid #e2e8f0; border-radius: 12px; 
+            transition: 0.3s;
+        }
+        .staff-card:hover { border-color: var(--saffron); background: #fffcf9; }
+        
+        .info h4 { margin: 0; color: var(--dark); font-size: 1.1rem; }
+        .info p { margin: 0; font-size: 0.8rem; color: #64748b; font-weight: bold; text-transform: uppercase; }
+        
+        .actions { display: flex; gap: 10px; }
+        .btn-check { 
+            color: white; border: none; padding: 10px 18px; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; 
+            transition: 0.2s; font-size: 0.85rem;
+        }
+        .btn-in { background: var(--dark); }
+        .btn-out { background: var(--danger); }
+        .btn-check:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .back-link { display: inline-block; margin-bottom: 20px; text-decoration: none; color: var(--saffron); font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/table/" class="back-link">← Back to Floor</a>
+        <h2>Staff On Duty</h2>
+        <p class="subtitle">Select your name to mark attendance for <strong>{{ today }}</strong></p>
+
+        <div class="staff-grid">
+            {% for emp in employees %}
+            <div class="staff-card">
+                <div class="info">
+                    <h4>{{ emp.name }}</h4>
+                    <p>{{ emp.get_role_display }}</p>
+                </div>
+                
+                <div class="actions">
+                    <button onclick="markAttendance({{ emp.id }}, 'IN', this)" 
+                            class="btn-check btn-in">
+                        Check In
+                    </button>
+                    
+                    <button onclick="markAttendance({{ emp.id }}, 'OUT', this)" 
+                            class="btn-check btn-out">
+                        Check Out
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <p style="text-align: center; color: #94a3b8;">No active employees found in Database.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function markAttendance(empId, action, btn) {
+            // Prevent double clicks
+            if(btn.disabled) return;
+            
+            const fd = new FormData();
+            fd.append('employee_id', empId);
+            fd.append('action', action);
+
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Wait...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/table/attendance/mark/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+                    body: fd
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    btn.innerText = "✅ " + data.status;
+                    btn.style.background = "#10b981";
+                    // Refresh to update the UI
+                    setTimeout(() => { location.reload(); }, 1000);
+                } else {
+                    // This catches "Already checked in" or "No check-in found" from views.py
+                    alert(data.error); 
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                alert("Connection error. Is the server running?");
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

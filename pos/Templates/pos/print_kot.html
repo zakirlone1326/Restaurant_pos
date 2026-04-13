@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KOT - Table {{ order.table.table_number }}</title>
+    <style>
+        body { width: 80mm; font-family: 'Courier New', monospace; padding: 10px; margin: 0; background: white; }
+        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; }
+        .details { margin: 10px 0; font-size: 14px; display: flex; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; border-bottom: 1px solid #000; font-size: 14px; }
+        td { padding: 8px 0; font-size: 18px; font-weight: bold; border-bottom: 1px dotted #ccc; }
+        .footer { margin-top: 20px; text-align: center; font-size: 12px; border-top: 2px solid #000; padding-top: 10px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="header">
+        <h1 style="margin: 5px 0;">KITCHEN ORDER</h1>
+        <h2 style="margin: 0; font-size: 24px;">TABLE: {{ order.table.table_number }}</h2>
+    </div>
+
+    <div class="details">
+        <span>Order: #{{ order.id }}</span>
+        <span>Time: {{ "now"|date:"H:i" }}</span>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 50px;">QTY</th>
+                <th>ITEM NAME</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.menu_variant.menu_item.name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p style="font-weight: bold; margin: 0;">*** NEW ITEMS ONLY ***</p>
+        <p style="font-size: 10px;">Outlet: {{ order.table.restaurant.name }}</p>
+        <button class="no-print" onclick="window.print()" style="margin-top: 10px; padding: 5px 15px; cursor: pointer;">Print Again</button>
+    </div>
+</body>
+</html>

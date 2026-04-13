@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KOSHUR POS | MANAGEMENT </title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --saffron: #f97316; 
+            --dark: #0f172a; 
+            --emerald: #10b981;
+            --sky: #38bdf8;
+            --slate-500: #64748b;
+            --slate-200: #e2e8f0;
+            --light-gray: #f8fafc;
+        }
+
+        body { 
+            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            background: var(--light-gray); 
+            color: var(--dark);
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .brand { font-weight: 800; text-transform: uppercase; letter-spacing: -0.025em; margin: 0; font-size: 1.5rem; }
+        .brand span { color: var(--saffron); }
+
+        .header { 
+            background: var(--dark); 
+            color: white; 
+            padding: 16px 32px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .header-btn {
+            background: var(--saffron);
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: opacity 0.2s;
+        }
+        .header-btn:hover { opacity: 0.9; }
+
+        .sales-track-card {
+            background: white;
+            max-width: 600px;
+            margin: 40px auto;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05);
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+
+        .range-selector select, .range-selector input {
+            border: 1px solid var(--slate-200);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-family: inherit;
+            background: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--dark);
+            outline: none;
+        }
+
+        .main-summary { text-align: center; padding: 20px 0; }
+        .main-summary h1 { 
+            font-size: 4rem; 
+            margin: 0; 
+            font-weight: 800; 
+            color: var(--dark); 
+            letter-spacing: -0.05em;
+        }
+        .main-summary p { color: var(--slate-500); font-size: 1rem; margin-top: 4px; font-weight: 600; letter-spacing: 0.025em; }
+
+        .chart-wrapper { overflow-x: auto; margin: 32px 0 12px 0; scrollbar-width: none; }
+        .chart-wrapper::-webkit-scrollbar { display: none; }
+
+        .chart-container { 
+            display: flex; 
+            align-items: flex-end; 
+            justify-content: space-around; 
+            height: 140px; 
+            min-width: 100%;
+            border-bottom: 2px solid var(--light-gray); 
+            position: relative;
+            padding-bottom: 4px;
+        }
+        .bar { 
+            flex: 1;
+            max-width: 30px;
+            margin: 0 4px;
+            background: var(--sky); 
+            border-radius: 6px 6px 0 0; 
+            transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .chart-labels {
+             display: flex; 
+             justify-content: space-around; 
+             color: var(--sky); 
+             font-size: 0.65rem; 
+             font-weight: 500; 
+             margin-top: 8px;
+             margin-bottom: 32px;
+             text-transform: uppercase;
+        }
+
+        .chart-labels span { flex: 1; text-align: center; white-space: nowrap; }
+
+        .category-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 8px; border-bottom: 1px solid var(--light-gray); }
+        .category-row:last-child { border-bottom: none; }
+        .type-info { display: flex; align-items: center; gap: 16px; }
+        .icon-box { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 0 32px 32px 32px; max-width: 1200px; margin: auto; }
+        .card { background: white; padding: 28px; border-radius: 24px; border-top: 6px solid var(--saffron); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+        .card h3 { color: var(--slate-500); font-size: 0.75rem; text-transform: uppercase; margin: 0; font-weight: 700; letter-spacing: 0.05em; }
+        .card p { font-size: 2.25rem; font-weight: 800; margin: 12px 0 0 0; color: var(--dark); letter-spacing: -0.025em; }
+
+        .section-title { max-width: 1200px; margin: 48px auto 24px auto; padding: 0 32px; font-weight: 800; border-left: 6px solid var(--saffron); font-size: 1.4rem; letter-spacing: -0.01em; }
+
+        .action-grid { max-width: 1200px; margin: auto; padding: 0 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+        .btn-box { 
+            background: white; padding: 24px; border-radius: 20px; 
+            text-decoration: none; color: var(--dark); font-weight: 700; 
+            border: 1px solid var(--slate-200); display: flex; align-items: center; gap: 16px;
+            transition: all 0.2s ease; font-size: 0.95rem;
+        }
+        .btn-box:hover { border-color: var(--saffron); transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .custom-date-group { gap: 10px; align-items: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 class="brand">KOSHUR <span>POS</span> <small style="font-size: 0.45em; opacity: 0.6; font-weight: 400; margin-left: 12px; letter-spacing: 1px;">ADMIN</small></h1>
+        <a href="/table/" class="header-btn">Live Floor</a>
+    </div>
+
+    <div class="sales-track-card">
+        <div class="card-header">
+            <h2 style="font-size: 1rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;">Sales Overview</h2>
+            <form id="rangeForm" method="GET" class="range-selector">
+                <select name="period" id="periodSelect" onchange="toggleDateInputs()">
+                    <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                    <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                    <option value="7days" {% if period == '7days' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+
+                <div id="customDateContainer" class="custom-date-group" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %};">
+                    <input type="date" name="start_date" value="{{ start_date }}">
+                    <input type="date" name="end_date" value="{{ end_date }}">
+                    <button type="submit" style="background:var(--saffron); color:white; border:none; padding:10px 16px; border-radius:10px; font-weight:700; cursor:pointer;">Apply</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="main-summary">
+            <span style="color: var(--slate-200); font-weight: 800; font-size: 1.75rem; vertical-align: top; margin-right: 4px;">₹</span>
+            <h1>{{ revenue|floatformat:0 }}</h1>
+            <p>{{ order_count }} Orders</p>
+        </div>
+
+        <div class="chart-wrapper">
+            <div class="chart-container">
+                {% for pct in scaled_hourly %}
+                    <div class="bar" style="height: {{ pct }}%;"></div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="chart-labels">
+             {% for label in graph_labels %}
+                 <span>{{ label }}</span>
+             {% endfor %}
+        </div>
+
+        <div class="category-list">
+            <div class="category-row">
+                <div class="type-info">
+                    <div class="icon-box" style="background: #fef2f2; color: #ef4444;">🍽️</div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.1rem;">Dine In</div>
+                        <div style="font-size: 0.85rem; color: var(--slate-500); font-weight: 500;">{{ dine_in.count }} Orders</div>
+                    </div>
+                </div>
+                <div style="font-weight: 800; font-size: 1.15rem;">₹{{ dine_in.rev|floatformat:0 }}</div>
+            </div>
+
+            <div class="category-row">
+                <div class="type-info">
+                    <div class="icon-box" style="background: #fffbeb; color: #f59e0b;">🛍️</div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.1rem;">Pick Up</div>
+                        <div style="font-size: 0.85rem; color: var(--slate-500); font-weight: 500;">{{ pickup.count }} Orders</div>
+                    </div>
+                </div>
+                <div style="font-weight: 800; font-size: 1.15rem;">₹{{ pickup.rev|floatformat:0 }}</div>
+            </div>
+
+            <div class="category-row">
+                <div class="type-info">
+                    <div class="icon-box" style="background: #f0fdf4; color: #22c55e;">🛵</div>
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.1rem;">Delivery</div>
+                        <div style="font-size: 0.85rem; color: var(--slate-500); font-weight: 500;">{{ delivery.count }} Orders</div>
+                    </div>
+                </div>
+                <div style="font-weight: 800; font-size: 1.15rem;">₹{{ delivery.rev|floatformat:0 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Revenue</h3>
+            <p>₹{{ revenue|floatformat:0 }}</p>
+        </div>
+        <div class="card">
+            <h3>Staff on Duty</h3>
+            <p>{{ staff_present }}</p>
+        </div>
+        <div class="card" style="border-top-color: var(--emerald);">
+            <h3>Net Profit</h3>
+            <p style="color: var(--emerald);">₹{{ profit|floatformat:0 }}</p>
+        </div>
+    </div>
+
+    <h2 class="section-title">Live Operations</h2>
+    <div class="action-grid">
+        <a href="/admin/core/pos/order/?is_settled__exact=0" class="btn-box"><span>🏃</span> Running Orders</a>
+        <a href="/admin/core/pos/order/" class="btn-box"><span>📜</span> All Bills</a>
+        <a href="/admin/core/pos/expense/" class="btn-box"><span>💸</span> Record Expense</a>
+        <a href="/staff/" class="btn-box"><span>🕒</span> Attendance Log</a>
+    </div>
+
+    <h2 class="section-title">Configuration & Payroll</h2>
+    <div class="action-grid">
+        <a href="/admin/core/pos/menuitem/" class="btn-box"><span>🍴</span> Menu Items</a>
+        <a href="/admin/core/pos/table/" class="btn-box"><span>🪑</span> Floor Plan</a>
+        <a href="/admin/core/pos/employee/" class="btn-box"><span>👥</span> Employee Directory</a>
+        <a href="/admin/core/pos/salarypayment/" class="btn-box"><span>💰</span> Salary Slips</a>
+    </div>
+
+    <div style="text-align: center; margin: 80px 0; color: var(--slate-500); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
+        POWERED BY KOSHUR POS • SECURE ADMIN • 2026
+    </div>
+
+    <script>
+        function toggleDateInputs() {
+            const select = document.getElementById('periodSelect');
+            const customContainer = document.getElementById('customDateContainer');
+            if (select.value === 'custom') {
+                customContainer.style.display = 'flex';
+            } else {
+                customContainer.style.display = 'none';
+                document.getElementById('rangeForm').submit();
+            }
+        }
+    </script>
+</body>
+</html>
