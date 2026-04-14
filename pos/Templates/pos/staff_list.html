@@ -67,44 +67,44 @@
     </div>
 
     <script>
-        async function markAttendance(empId, action, btn) {
-            // Prevent double clicks
-            if(btn.disabled) return;
-            
-            const fd = new FormData();
-            fd.append('employee_id', empId);
-            fd.append('action', action);
+        // Locate the markAttendance function in your script and update this block:
+async function markAttendance(empId, action, btn) {
+    if(btn.disabled) return;
+    
+    const fd = new FormData();
+    fd.append('employee_id', empId);
+    fd.append('action', action);
 
-            const originalText = btn.innerText;
-            btn.innerText = "⏳ Wait...";
-            btn.disabled = true;
+    const originalText = btn.innerText;
+    btn.innerText = "⏳ Wait...";
+    btn.disabled = true;
 
-            try {
-                const res = await fetch('/table/attendance/mark/', {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': '{{ csrf_token }}' },
-                    body: fd
-                });
+    try {
+        // FIXED: Using Django Template Tag for the URL
+        const res = await fetch("{% url 'mark_attendance' %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: fd
+        });
 
-                const data = await res.json();
-                
-                if (res.ok) {
-                    btn.innerText = "✅ " + data.status;
-                    btn.style.background = "#10b981";
-                    // Refresh to update the UI
-                    setTimeout(() => { location.reload(); }, 1000);
-                } else {
-                    // This catches "Already checked in" or "No check-in found" from views.py
-                    alert(data.error); 
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                }
-            } catch (error) {
-                alert("Connection error. Is the server running?");
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
+        const data = await res.json();
+        
+        if (res.ok) {
+            btn.innerText = "✅ " + data.status;
+            btn.style.background = "#10b981";
+            setTimeout(() => { location.reload(); }, 1000);
+        } else {
+            alert(data.error || "Something went wrong"); 
+            btn.innerText = originalText;
+            btn.disabled = false;
         }
+    } catch (error) {
+        console.error("Fetch error:", error);
+        alert("Server communication failed. Please check if the server is running.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
     </script>
 </body>
 </html>
