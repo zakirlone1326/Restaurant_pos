@@ -42,27 +42,33 @@
         </tbody>
     </table>
 
-    <div class="totals">
-        <div style="display:flex; justify-content: space-between;">
-            <span>Subtotal:</span><span>₹{{ order.sub_total|floatformat:2 }}</span>
-        </div>
-
-        {# ONLY SHOW GST IF APPLIED #}
-        {% if order.apply_gst %}
-        <div style="display:flex; justify-content: space-between;">
-            <span>GST (5%):</span><span>₹{{ order.gst|floatformat:2 }}</span>
-        </div>
-        {% endif %}
-
-        <div class="grand-total" style="display:flex; justify-content: space-between;">
-            <span>TOTAL:</span><span>₹{{ order.grand_total|floatformat:2 }}</span>
-        </div>
+   <div class="totals">
+    <div style="display:flex; justify-content: space-between;">
+        <span>Total:</span>
+        <span>₹{{ order.sub_total|floatformat:2 }}</span>
     </div>
 
-    <div class="center footer">
-        <p style="margin: 0;">Mode: {{ order.get_payment_mode_display }}</p>
-        <p style="font-weight: bold; margin: 10px 0;">THANK YOU! VISIT AGAIN</p>
-        <button class="no-print" onclick="window.print()" style="padding: 8px 15px; background: #000; color: #fff; border: none; cursor: pointer; border-radius: 3px;">Print Receipt</button>
+    {% if order.discount_value > 0 %}
+    <div style="display:flex; justify-content: space-between; font-style: italic;">
+        <span>Discount 
+            {% if order.discount_type == 'PERCENT' %}({{ order.discount_value }}%){% endif %}:
+        </span>
+        <span>-₹{{ order.get_total_discount|floatformat:2 }}</span>
     </div>
+    {% endif %}
+
+    {% if order.apply_gst %}
+    <div style="display:flex; justify-content: space-between;">
+        <span>GST (5%):</span>
+        <span>₹{{ order.gst|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+
+    <div class="grand-total" style="display:flex; justify-content: space-between; border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 18px;">
+        <span>Amount Payable:</span>
+        <span>₹{{ order.grand_total|floatformat:2 }}</span>
+    </div>
+</div>
+</div>
 </body>
 </html>

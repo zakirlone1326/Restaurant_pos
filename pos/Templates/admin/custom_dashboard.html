@@ -23,6 +23,82 @@
             -webkit-font-smoothing: antialiased;
         }
         
+        /* --- SIDEBAR STYLES --- */
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1001;
+            top: 0;
+            left: 0;
+            background-color: var(--dark);
+            overflow-x: hidden;
+            transition: 0.4s;
+            padding-top: 60px;
+            box-shadow: 10px 0 20px rgba(0,0,0,0.3);
+        }
+
+        .sidebar a, .sidebar button {
+            padding: 12px 32px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            display: block;
+            transition: 0.3s;
+            font-weight: 600;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .sidebar a:hover, .sidebar button:hover {
+            color: var(--saffron);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .sidebar .closebtn {
+            position: absolute;
+            top: 10px;
+            right: 25px;
+            font-size: 36px;
+            margin-left: 50px;
+            color: white;
+        }
+
+        .sidebar-brand {
+            padding: 0 32px 30px 32px;
+            font-weight: 800;
+            color: white;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+        }
+
+        .sidebar-brand span { color: var(--saffron); }
+
+        .sidebar-section {
+            padding: 20px 32px 10px 32px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--saffron);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        /* --- DASHBOARD STYLES --- */
         .brand { font-weight: 800; text-transform: uppercase; letter-spacing: -0.025em; margin: 0; font-size: 1.5rem; }
         .brand span { color: var(--saffron); }
 
@@ -48,12 +124,11 @@
             letter-spacing: 0.05em;
             transition: opacity 0.2s;
         }
-        .header-btn:hover { opacity: 0.9; }
 
         .sales-track-card {
             background: white;
             max-width: 600px;
-            margin: 40px auto;
+            margin: 20px auto;
             border-radius: 24px;
             padding: 32px;
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05);
@@ -74,82 +149,166 @@
         }
 
         .main-summary { text-align: center; padding: 20px 0; }
-        .main-summary h1 { 
-            font-size: 4rem; 
-            margin: 0; 
-            font-weight: 800; 
-            color: var(--dark); 
-            letter-spacing: -0.05em;
-        }
-        .main-summary p { color: var(--slate-500); font-size: 1rem; margin-top: 4px; font-weight: 600; letter-spacing: 0.025em; }
+        .main-summary h1 { font-size: 4rem; margin: 0; font-weight: 800; color: var(--dark); letter-spacing: -0.05em; }
+        .main-summary p { color: var(--slate-500); font-size: 1rem; margin-top: 4px; font-weight: 600; }
 
-        .chart-wrapper { overflow-x: auto; margin: 32px 0 12px 0; scrollbar-width: none; }
-        .chart-wrapper::-webkit-scrollbar { display: none; }
-
+        /* --- UPDATED CHART STYLES --- */
         .chart-container { 
             display: flex; 
             align-items: flex-end; 
             justify-content: space-around; 
             height: 140px; 
-            min-width: 100%;
+            min-width: 100%; 
             border-bottom: 2px solid var(--light-gray); 
-            position: relative;
-            padding-bottom: 4px;
+            position: relative; 
+            padding-bottom: 4px; 
+            margin-top: 40px;
         }
+        
         .bar { 
-            flex: 1;
-            max-width: 30px;
-            margin: 0 4px;
+            flex: 1; 
+            max-width: 28px; 
+            margin: 0 4px; 
             background: var(--sky); 
             border-radius: 6px 6px 0 0; 
-            transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.3s ease; 
+            position: relative;
+            cursor: pointer;
         }
-        .chart-labels {
-             display: flex; 
-             justify-content: space-around; 
-             color: var(--sky); 
-             font-size: 0.65rem; 
-             font-weight: 500; 
-             margin-top: 8px;
-             margin-bottom: 32px;
-             text-transform: uppercase;
+        
+
+        .bar:hover {
+            background: var(--saffron);
         }
 
-        .chart-labels span { flex: 1; text-align: center; white-space: nowrap; }
+        /* Tooltip Logic */
+        .bar::after {
+            content: attr(data-label) "\A Total Sales: ₹" attr(data-sales);
+            white-space: pre; /* Allows the line break \A */
+            position: absolute;
+            top: -65px; /* Adjusted for two lines */
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: var(--dark);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: none;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border: 1px solid var(--slate-200);
+            z-index: 50;
+            text-align: left;
+        }
 
-        .category-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 8px; border-bottom: 1px solid var(--light-gray); }
-        .category-row:last-child { border-bottom: none; }
+        .bar:hover::after {
+            display: block;
+        }
+
+        .bar:hover::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--dark);
+        }
+
+        .chart-labels { 
+            display: flex; 
+            justify-content: space-around; 
+            color: var(--sky); 
+            font-size: 0.6rem; 
+            font-weight: 700; 
+            margin-top: 12px; 
+            text-transform: uppercase; 
+        }
+
+        .chart-labels span {
+            flex: 1;
+            text-align: center;
+        }
+
+        /* --- REMAINING STYLES --- */
+        .leakage-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
+        .leakage-box { background: var(--light-gray); padding: 16px; border-radius: 16px; border: 1px solid var(--slate-200); }
+        .leakage-box span { display: block; font-size: 0.65rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase; }
+        .leakage-box b { font-size: 1.1rem; color: var(--dark); display: block; margin-top: 4px; }
+
+        .saffron-tag { color: var(--saffron); font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; display: block; margin-bottom: 12px; text-transform: uppercase; }
+        .item-line { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--light-gray); font-size: 0.9rem; }
+
+        .category-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 8px; border-bottom: 1px solid var(--light-gray); }
         .type-info { display: flex; align-items: center; gap: 16px; }
-        .icon-box { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+        .icon-box { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
 
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 0 32px 32px 32px; max-width: 1200px; margin: auto; }
-        .card { background: white; padding: 28px; border-radius: 24px; border-top: 6px solid var(--saffron); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
-        .card h3 { color: var(--slate-500); font-size: 0.75rem; text-transform: uppercase; margin: 0; font-weight: 700; letter-spacing: 0.05em; }
-        .card p { font-size: 2.25rem; font-weight: 800; margin: 12px 0 0 0; color: var(--dark); letter-spacing: -0.025em; }
-
-        .section-title { max-width: 1200px; margin: 48px auto 24px auto; padding: 0 32px; font-weight: 800; border-left: 6px solid var(--saffron); font-size: 1.4rem; letter-spacing: -0.01em; }
-
-        .action-grid { max-width: 1200px; margin: auto; padding: 0 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-        .btn-box { 
-            background: white; padding: 24px; border-radius: 20px; 
-            text-decoration: none; color: var(--dark); font-weight: 700; 
-            border: 1px solid var(--slate-200); display: flex; align-items: center; gap: 16px;
-            transition: all 0.2s ease; font-size: 0.95rem;
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 600px; margin: 0 auto 32px auto; }
+        .card { 
+            background: white; padding: 20px; border-radius: 20px; border-top: 5px solid var(--saffron); 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); text-align: center;
         }
-        .btn-box:hover { border-color: var(--saffron); transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-        .custom-date-group { gap: 10px; align-items: center; margin-top: 10px; }
+        .card h3 { color: var(--slate-500); font-size: 0.7rem; text-transform: uppercase; margin: 0; font-weight: 700; letter-spacing: 0.05em; }
+        .card p { font-size: 1.6rem; font-weight: 800; margin: 8px 0 0 0; color: var(--dark); }
+
+        .section-title { max-width: 1200px; margin: 40px auto 20px auto; padding: 0 32px; font-weight: 800; border-left: 6px solid var(--saffron); font-size: 1.3rem; }
+
+        .action-grid { max-width: 1200px; margin: auto; padding: 0 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+        .btn-box { 
+            background: white; padding: 20px; border-radius: 18px; 
+            text-decoration: none; color: var(--dark); font-weight: 700; 
+            border: 1px solid var(--slate-200); display: flex; align-items: center; gap: 14px;
+            transition: all 0.2s ease; font-size: 0.9rem;
+        }
+        .btn-box:hover { border-color: var(--saffron); transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
     </style>
 </head>
 <body>
 
+    <!-- OVERLAY -->
+    <div id="mainOverlay" class="overlay" onclick="closeNav()"></div>
+
+    <!-- SIDEBAR -->
+    <div id="mySidebar" class="sidebar">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">×</a>
+        <div class="sidebar-brand">KOSHUR <span>POS</span></div>
+        
+        <div class="sidebar-section">OPERATIONS</div>
+        <a href="/table/">🏃 Running Orders</a>
+        <a href="/admin/core/pos/order/">📜 All Bills & Invoices</a>
+        <a href="{% url 'menu_management' %}">🍴 Menu Control</a>
+        
+        <div class="sidebar-section">RESOURCES</div>
+        <a href="/admin/core/pos/expense/">💸 Daily Expenses</a>
+        <a href="{% url 'attendance_report' %}">🕒 Attendance Report</a>
+        <a href="/admin/core/pos/employee/">👥 Staff Directory</a>
+        
+        <div class="sidebar-section">SYSTEM</div>
+        <a href="/admin/core/">⚙️ Admin Panel</a>
+        
+        <!-- SECURE LOGOUT FORM -->
+        <form action="{% url 'logout' %}" method="post" id="logout-form" style="display: none;">
+            {% csrf_token %}
+        </form>
+        <button onclick="if(confirm('Logout from Koshur POS?')) document.getElementById('logout-form').submit();" style="color: #ef4444; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+            🚪 Logout
+        </button>
+    </div>
+
+    <!-- HEADER -->
     <div class="header">
-        <h1 class="brand">KOSHUR <span>POS</span> <small style="font-size: 0.45em; opacity: 0.6; font-weight: 400; margin-left: 12px; letter-spacing: 1px;">ADMIN</small></h1>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-size:30px; cursor:pointer; color: var(--saffron); line-height: 1;" onclick="openNav()">&#9776;</span>
+            <h1 class="brand">KOSHUR <span>POS</span> <small style="font-size: 0.45em; opacity: 0.6; font-weight: 400; margin-left: 5px;">ADMIN</small></h1>
+        </div>
         <a href="/table/" class="header-btn">Live Floor</a>
     </div>
 
+    <!-- SALES CARD -->
     <div class="sales-track-card">
         <div class="card-header">
-            <h2 style="font-size: 1rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;">Sales Overview</h2>
+            <h2 style="font-size: 0.8rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1px;">Sales Overview</h2>
             <form id="rangeForm" method="GET" class="range-selector">
                 <select name="period" id="periodSelect" onchange="toggleDateInputs()">
                     <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
@@ -158,107 +317,161 @@
                     <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
                     <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
                 </select>
-
-                <div id="customDateContainer" class="custom-date-group" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %};">
+                <div id="customDateContainer" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %}; gap: 5px; margin-top: 10px;">
                     <input type="date" name="start_date" value="{{ start_date }}">
                     <input type="date" name="end_date" value="{{ end_date }}">
-                    <button type="submit" style="background:var(--saffron); color:white; border:none; padding:10px 16px; border-radius:10px; font-weight:700; cursor:pointer;">Apply</button>
+                    <button type="submit" style="background:var(--saffron); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">OK</button>
                 </div>
             </form>
         </div>
 
         <div class="main-summary">
-            <span style="color: var(--slate-200); font-weight: 800; font-size: 1.75rem; vertical-align: top; margin-right: 4px;">₹</span>
+            <span style="color: var(--slate-200); font-weight: 800; font-size: 1.5rem; vertical-align: top;">₹</span>
             <h1>{{ revenue|floatformat:0 }}</h1>
-            <p>{{ order_count }} Orders</p>
+            <p>{{ order_count }} Orders Completed</p>
         </div>
 
-        <div class="chart-wrapper">
-            <div class="chart-container">
-                {% for pct in scaled_hourly %}
-                    <div class="bar" style="height: {{ pct }}%;"></div>
-                {% endfor %}
-            </div>
+        <!-- UPDATED GRAPH SECTION -->
+         
+        <div class="chart-container">
+    {% for item in graph_data %}
+        <div class="bar" 
+             style="height: {{ item.pct }}%;" 
+             data-label="{{ item.range_label }}" 
+             data-sales="{{ item.amount|floatformat:0 }}">
         </div>
-        
-        <div class="chart-labels">
-             {% for label in graph_labels %}
-                 <span>{{ label }}</span>
-             {% endfor %}
-        </div>
+    {% endfor %}
+</div>
 
-        <div class="category-list">
+<div class="chart-labels">
+    <!-- Shows 10 am, 2 pm, etc. on the bottom axis -->
+    {% for item in graph_data %}
+        <span>{{ item.point_label }}</span>
+    {% endfor %}
+</div>
+
+        <!-- ORDER TYPE BREAKDOWN -->
+        <div style="margin-top: 40px; border-top: 1px solid var(--light-gray); padding-top: 24px;">
             <div class="category-row">
                 <div class="type-info">
-                    <div class="icon-box" style="background: #fef2f2; color: #ef4444;">🍽️</div>
+                    <div class="icon-box" style="background: #fdf2f2; color: #ef4444;">🍽️</div>
                     <div>
-                        <div style="font-weight: 700; font-size: 1.1rem;">Dine In</div>
-                        <div style="font-size: 0.85rem; color: var(--slate-500); font-weight: 500;">{{ dine_in.count }} Orders</div>
+                        <div style="font-weight: 700;">Dine In</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ dine_in.avg|floatformat:0 }}</div>
                     </div>
                 </div>
-                <div style="font-weight: 800; font-size: 1.15rem;">₹{{ dine_in.rev|floatformat:0 }}</div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 800; font-size: 1.1rem;">₹{{ dine_in.rev|floatformat:0 }}</div>
+                    <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ dine_in.count }} Orders</div>
+                </div>
             </div>
 
             <div class="category-row">
                 <div class="type-info">
                     <div class="icon-box" style="background: #fffbeb; color: #f59e0b;">🛍️</div>
                     <div>
-                        <div style="font-weight: 700; font-size: 1.1rem;">Pick Up</div>
-                        <div style="font-size: 0.85rem; color: var(--slate-500); font-weight: 500;">{{ pickup.count }} Orders</div>
+                        <div style="font-weight: 700;">Pick Up</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ pickup.avg|floatformat:0 }}</div>
                     </div>
                 </div>
-                <div style="font-weight: 800; font-size: 1.15rem;">₹{{ pickup.rev|floatformat:0 }}</div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 800; font-size: 1.1rem;">₹{{ pickup.rev|floatformat:0 }}</div>
+                    <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ pickup.count }} Orders</div>
+                </div>
             </div>
 
-            <div class="category-row">
+            <div class="category-row" style="border-bottom: none;">
                 <div class="type-info">
                     <div class="icon-box" style="background: #f0fdf4; color: #22c55e;">🛵</div>
                     <div>
-                        <div style="font-weight: 700; font-size: 1.1rem;">Delivery</div>
-                        <div style="font-size: 0.85rem; color: var(--slate-500); font-weight: 500;">{{ delivery.count }} Orders</div>
+                        <div style="font-weight: 700;">Delivery</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ delivery.avg|floatformat:0 }}</div>
                     </div>
                 </div>
-                <div style="font-weight: 800; font-size: 1.15rem;">₹{{ delivery.rev|floatformat:0 }}</div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 800; font-size: 1.1rem;">₹{{ delivery.rev|floatformat:0 }}</div>
+                    <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ delivery.count }} Orders</div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- QUICK STATS -->
     <div class="grid">
         <div class="card">
-            <h3>Revenue</h3>
+            <h3>NET REVENUE</h3>
             <p>₹{{ revenue|floatformat:0 }}</p>
         </div>
         <div class="card">
-            <h3>Staff on Duty</h3>
+            <h3>STAFF ACTIVE</h3>
             <p>{{ staff_present }}</p>
         </div>
         <div class="card" style="border-top-color: var(--emerald);">
-            <h3>Net Profit</h3>
+            <h3 style="color: var(--slate-500);">ESTIMATED PROFIT</h3>
             <p style="color: var(--emerald);">₹{{ profit|floatformat:0 }}</p>
         </div>
     </div>
 
-    <h2 class="section-title">Live Operations</h2>
-    <div class="action-grid">
-        <a href="/admin/core/pos/order/?is_settled__exact=0" class="btn-box"><span>🏃</span> Running Orders</a>
-        <a href="/admin/core/pos/order/" class="btn-box"><span>📜</span> All Bills</a>
-        <a href="/admin/core/pos/expense/" class="btn-box"><span>💸</span> Record Expense</a>
-        <a href="{% url 'attendance_report' %}" class="btn-box"><span>🕒</span> Attendance Log</a>
+    <!-- REVENUE LEAKAGE -->
+    <div class="sales-track-card">
+        <span class="saffron-tag">Revenue Leakage & Audit</span>
+        <div class="leakage-grid">
+            <div class="leakage-box">
+                <span>Cancelled Bills</span>
+                <b>{{ cancelled_bills|default:"0" }}</b>
+            </div>
+            <div class="leakage-box">
+                <span>Cancelled KOTs</span>
+                <b>{{ cancelled_kots|default:"0" }}</b>
+            </div>
+            <div class="leakage-box">
+                <span>Total Discounts</span>
+                <b>₹{{ total_discounts|floatformat:0 }}</b>
+            </div>
+            <div class="leakage-box">
+                <span>Avg Order Value</span>
+                <b>₹{{ aov|floatformat:0 }}</b>
+            </div>
+        </div>
     </div>
 
-    <h2 class="section-title">Configuration & Payroll</h2>
-    <div class="action-grid">
-        <a href="/admin/core/pos/menuitem/" class="btn-box"><span>🍴</span> Menu Items</a>
-        <a href="/admin/core/pos/table/" class="btn-box"><span>🪑</span> Floor Plan</a>
-        <a href="/admin/core/pos/employee/" class="btn-box"><span>👥</span> Employee Directory</a>
-        <a href="/admin/core/pos/salarypayment/" class="btn-box"><span>💰</span> Salary Slips</a>
+    <!-- PRODUCT RANKINGS -->
+    <div class="sales-track-card">
+        <span class="saffron-tag">↑ Top Selling (Sales Wise)</span>
+        {% for item in top_sales %}
+        <div class="item-line">
+            <span style="font-weight: 600;">{{ item.menu_variant__menu_item__name }}</span>
+            <span>{{ item.pct|floatformat:1 }}% <b style="margin-left:12px; color: var(--dark);">₹{{ item.item_rev|floatformat:0 }}</b></span>
+        </div>
+        {% endfor %}
+
+        <div style="margin-top: 32px;"></div>
+
+        <span class="saffron-tag">↓ Low Selling (Quantity Wise)</span>
+        {% for item in low_qty %}
+        <div class="item-line">
+            <span style="font-weight: 600; color: var(--slate-500);">{{ item.menu_variant__menu_item__name }}</span>
+            <span style="font-weight: 800;">{{ item.total_qty }} <small>Qty</small></span>
+        </div>
+        {% endfor %}
     </div>
 
-    <div style="text-align: center; margin: 80px 0; color: var(--slate-500); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
-        POWERED BY KOSHUR POS • SECURE ADMIN • 2026
+    <!-- FOOTER INFO -->
+    <div style="text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
+        POWERED BY KOSHUR POS • 2026
     </div>
 
     <script>
+        function openNav() {
+            document.getElementById("mySidebar").style.width = "280px";
+            document.getElementById("mainOverlay").style.display = "block";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidebar").style.width = "0";
+            document.getElementById("mainOverlay").style.display = "none";
+        }
+
         function toggleDateInputs() {
             const select = document.getElementById('periodSelect');
             const customContainer = document.getElementById('customDateContainer');

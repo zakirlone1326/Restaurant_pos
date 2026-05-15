@@ -1,18 +1,17 @@
 from django.contrib import admin
 from django.urls import path, include
+from pos import views  # Import your views folder here
 
 urlpatterns = [
-    # 1. Standard Django Admin (hidden under /core/)
+    # 1. Standard Django Admin
     path('admin/core/', admin.site.urls), 
     
     # 2. Your Custom Management Dashboard & Analytics
-    # These are specific views you've built for the manager
-    path('admin/', include([
-        path('', 'pos.views.kashur_admin_dashboard', name='custom_admin'),
-        path('analytics/', 'pos.views.admin_analytics', name='admin_analytics'),
-    ])),
+    path('admin/', views.kashur_admin_dashboard, name='custom_admin'),
+    path('admin/analytics/', views.admin_analytics, name='admin_analytics'),
     
-    # 3. The Master Key
-    # This includes everything from your POS app at the root level
+    # 3. The Master Key - Includes all routes from pos/urls.py
     path('', include('pos.urls')), 
+
+   
 ]

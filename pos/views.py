@@ -3,7 +3,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt 
 from django.db import transaction
-from django.db.models import Sum, F, DecimalField, Q
+from django.db.models import Sum, F, DecimalField, Q, Avg
 from django.utils import timezone
 from datetime import timedelta, datetime
 from .models import (
@@ -17,7 +17,7 @@ from .utils import send_staff_notification
 # 🏢 KOSHUR POS - CUSTOM MANAGER DASHBOARD
 # ==========================================
 def kashur_admin_dashboard(request):
-    """Custom Management Hub with Zomato-style Sales Track"""
+    """Custom Management Hub with Petpooja-style Analytics"""
     if not request.user.is_staff:
         return redirect('login')
 
@@ -37,81 +37,149 @@ def kashur_admin_dashboard(request):
         start_str = request.GET.get('start_date')
         end_str = request.GET.get('end_date')
         if start_str and end_str:
-            start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+            try:
+                start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
 
-    # 2. Main Queries - Exclude Cancelled, Include Paid and Pending
+    # NEW: Dynamic Date Display String for the UI Header
+    # Replaces "Today" with "14th May" or ranges with "07 May to 14 May"
+    if start_date == end_date:
+        day = start_date.day
+        suffix = 'th' if 11 <= day <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+        display_date = start_date.strftime(f'%d{suffix} %b')
+    else:
+        display_date = f"{start_date.strftime('%d %b')} to {end_date.strftime('%d %b')}"
+
+    # 2. Main Queries
     orders_qs = Order.objects.filter(
         created_at__date__range=[start_date, end_date], 
         is_cancelled=False
     ).filter(Q(payment_status='PAID') | Q(payment_status='PENDING'))
     
-    revenue = orders_qs.aggregate(Sum('grand_total'))['grand_total__sum'] or 0
+    revenue_data = orders_qs.aggregate(total=Sum('grand_total'))
+    revenue = revenue_data['total'] or 0
     
-    # Fallback revenue calculation if grand_total isn't saved yet
     if revenue == 0:
         revenue = OrderItem.objects.filter(order__in=orders_qs, is_cancelled=False).aggregate(
             total=Sum(F('quantity') * F('menu_variant__price'), output_field=DecimalField())
         )['total'] or 0
 
-    expenses = Expense.objects.filter(date__range=[start_date, end_date]).aggregate(Sum('amount'))['amount__sum'] or 0
+    expenses_data = Expense.objects.filter(date__range=[start_date, end_date]).aggregate(total=Sum('amount'))
+    expenses = expenses_data['total'] or 0
 
-    # 3. DYNAMIC GRAPH LOGIC
-    graph_labels = []
-    graph_values = []
+    # Analytics Calculations (Existing)
+    all_orders_range = Order.objects.filter(created_at__date__range=[start_date, end_date])
+    cancelled_bills = all_orders_range.filter(is_cancelled=True).count()
+    cancelled_kots = OrderItem.objects.filter(order__in=all_orders_range, is_cancelled=True).count()
+    total_discounts = sum(o.get_total_discount() for o in orders_qs)
+    order_count = orders_qs.count()
+    aov = float(revenue) / order_count if order_count > 0 else 0
+
+    # Item Performance (Existing)
+    items_in_range = OrderItem.objects.filter(order__in=orders_qs, is_cancelled=False)
+    total_rev_float = float(revenue) if revenue > 0 else 1
+    top_sales = items_in_range.values('menu_variant__menu_item__name').annotate(
+        item_rev=Sum(F('quantity') * F('menu_variant__price'))
+    ).order_by('-item_rev')[:5]
+    for item in top_sales:
+        item['pct'] = (float(item['item_rev']) / total_rev_float) * 100
     
-    if (end_date - start_date).days >= 1:
-        # --- DAILY BREAKDOWN ---
-        delta = end_date - start_date
-        for i in range(delta.days + 1):
-            curr_date = start_date + timedelta(days=i)
-            day_rev = orders_qs.filter(created_at__date=curr_date).aggregate(
-                total=Sum('grand_total'))['total'] or 0
-            
-            graph_labels.append(curr_date.strftime('%d %b'))
-            graph_values.append(float(day_rev))
-    else:
-        # --- CUSTOM HOURLY SLOTS (10AM, 2PM, 6PM, 10PM, 2AM, 6AM) ---
-        slots = [10, 14, 18, 22, 2, 6]
-        for hour in slots:
-            dt = datetime.strptime(str(hour), "%H")
-            label = dt.strftime("%I %p").lstrip("0")
+    low_qty = items_in_range.values('menu_variant__menu_item__name').annotate(
+        total_qty=Sum('quantity')
+    ).order_by('total_qty')[:5]
 
-            if hour == 22:
-                slot_rev = orders_qs.filter(created_at__hour__gte=22).aggregate(
-                    total=Sum('grand_total'))['total'] or 0
-            else:
-                slot_rev = orders_qs.filter(
-                    created_at__hour__gte=hour, 
-                    created_at__hour__lt=(hour + 4) % 24
-                ).aggregate(total=Sum('grand_total'))['total'] or 0
-            
-            graph_labels.append(label)
-            graph_values.append(float(slot_rev))
-
-    # --- AUTO-SCALING LOGIC ---
-    actual_max = max(graph_values) if any(graph_values) else 0
-    max_peak = actual_max if actual_max > 0 else 1 
-    scaled_hourly = [(val / max_peak * 100 if actual_max > 0 else 0) for val in graph_values]
-
-    # 4. Order Type Breakdown
-    def get_stats(otype):
-        qs = orders_qs.filter(order_type=otype)
-        rev = qs.aggregate(Sum('grand_total'))['grand_total__sum'] or 0
-        return {'rev': float(rev), 'count': qs.count()}
+    expense_details = Expense.objects.filter(date__range=[start_date, end_date])\
+        .values('category__name')\
+        .annotate(total_amount=Sum('amount'))\
+        .order_by('-total_amount')
 
     restaurant = Restaurant.objects.first()
     staff_present = Attendance.objects.filter(date=timezone.now().date(), is_present=True).count()
 
+    # ==========================================
+    # 3. 📈 ADAPTIVE GRAPH LOGIC (New)
+    # ==========================================
+    graph_data = [] 
+    total_days = (end_date - start_date).days
+
+    if total_days == 0:
+        # --- HOURLY SLOTS (Standard daily view) ---
+        slots = [
+            {'point': '10 am', 'range': '10:00 am - 02:00 pm', 'hours': range(10, 14)},
+            {'point': '2 pm',  'range': '02:00 pm - 06:00 pm', 'hours': range(14, 18)},
+            {'point': '6 pm',  'range': '06:00 pm - 10:00 pm', 'hours': range(18, 22)},
+            {'point': '10 pm', 'range': '10:00 pm - 02:00 am', 'hours': [22, 23, 0, 1]},
+            {'point': '2 am',  'range': '02:00 am - 06:00 am', 'hours': range(2, 6)},
+            {'point': '6 am',  'range': '06:00 am - 10:00 am', 'hours': range(6, 10)},
+        ]
+        for s in slots:
+            slot_rev = orders_qs.filter(created_at__hour__in=s['hours']).aggregate(
+                total=Sum('grand_total'))['total'] or 0
+            graph_data.append({
+                'point_label': s['point'],
+                'range_label': s['range'],
+                'amount': float(slot_rev)
+            })
+    else:
+        # --- ADAPTIVE GROUPING (Prevents overlapping labels) ---
+        if total_days <= 10:
+            step = 1  # Show every day
+        elif total_days <= 31:
+            step = 3  # Group by 3 days
+        else:
+            step = 7  # Group by week
+
+        for i in range(0, total_days + 1, step):
+            curr_start = start_date + timedelta(days=i)
+            # Prevent going over the end date in the last bucket
+            curr_end = min(curr_start + timedelta(days=step - 1), end_date)
+            
+            bucket_rev = orders_qs.filter(created_at__date__range=[curr_start, curr_end]).aggregate(
+                total=Sum('grand_total'))['total'] or 0
+            
+            if step == 1:
+                p_label = curr_start.strftime('%d %b')
+                r_label = curr_start.strftime('%A, %d %b %Y')
+            else:
+                p_label = curr_start.strftime('%d %b')
+                r_label = f"{curr_start.strftime('%d %b')} - {curr_end.strftime('%d %b')}"
+
+            graph_data.append({
+                'point_label': p_label,
+                'range_label': r_label,
+                'amount': float(bucket_rev)
+            })
+
+    # --- AUTO-SCALING FOR THE BARS ---
+    max_amount = max([d['amount'] for d in graph_data]) if any(d['amount'] for d in graph_data) else 1
+    for d in graph_data:
+        d['pct'] = (d['amount'] / max_amount * 100)
+
+    # 4. Order Type Breakdown Helper
+    def get_stats(otype):
+        qs = orders_qs.filter(order_type=otype)
+        rev = qs.aggregate(total=Sum('grand_total'))['total'] or 0
+        count = qs.count()
+        avg = float(rev) / count if count > 0 else 0
+        return {'rev': float(rev), 'count': count, 'avg': avg}
+
     context = {
+        'display_date': display_date, 
         'revenue': float(revenue),
-        'expenses': float(expenses or 0),
-        'profit': float(revenue) - float(expenses or 0),
-        'order_count': orders_qs.count(),
+        'expenses': float(expenses),
+        'profit': float(revenue) - float(expenses),
+        'order_count': order_count,
+        'aov': aov,
+        'cancelled_bills': cancelled_bills,
+        'cancelled_kots': cancelled_kots,
+        'total_discounts': float(total_discounts),
+        'top_sales': top_sales,
+        'low_qty': low_qty,
+        'expense_details': expense_details,
         'staff_present': staff_present,
-        'graph_labels': graph_labels,
-        'graph_values': graph_values,
-        'scaled_hourly': scaled_hourly, 
+        'graph_data': graph_data, 
         'dine_in': get_stats('DINE_IN'),
         'pickup': get_stats('PICK_UP'),
         'delivery': get_stats('DELIVERY'),
@@ -121,7 +189,6 @@ def kashur_admin_dashboard(request):
         'restaurant_name': restaurant.name if restaurant else "KOSHUR POS",
     }
     return render(request, 'admin/custom_dashboard.html', context)
-
 # ==========================================
 # 🏠 FRONTEND - TABLE FLOOR PLAN
 # ==========================================
@@ -147,7 +214,7 @@ def start_order(request, table_id):
     table = get_object_or_404(Table, id=table_id)
     if table.status != 'AVAILABLE':
         return JsonResponse({'error': 'Table is already occupied'}, status=400)
-    order = Order.objects.create(table=table)
+    order = Order.objects.create(table=table, payment_status='UNPAID')
     table.status = 'OCCUPIED'
     table.save()
     return JsonResponse({'success': True, 'order_id': order.id})
@@ -169,18 +236,26 @@ def add_item_to_order(request):
         table_id = request.POST.get('table_id')
         menu_item_id = request.POST.get('menu_item_id')
         table = get_object_or_404(Table, id=table_id)
-        # Add items to existing UNPAID order
-        active_order = table.orders.filter(payment_status='UNPAID', is_cancelled=False).first()
+        
+        # FIX: Look for any order that isn't PAID or CANCELLED
+        active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
         
         if not active_order:
-            active_order = Order.objects.create(table=table)
+            active_order = Order.objects.create(table=table, payment_status='UNPAID')
             table.status = 'OCCUPIED'
             table.save()
         
         menu_item = get_object_or_404(MenuItem, id=menu_item_id)
         variant = menu_item.variants.first() 
+        
+        if not variant:
+            return JsonResponse({'error': 'No price variant found for this item'}, status=400)
+
         order_item, created = OrderItem.objects.get_or_create(
-            order=active_order, menu_variant=variant, defaults={'quantity': 1}
+            order=active_order, 
+            menu_variant=variant, 
+            is_cancelled=False,
+            defaults={'quantity': 1}
         )
         if not created:
             order_item.quantity += 1
@@ -197,8 +272,8 @@ def delete_item(request):
     item_id = request.POST.get('item_id')
     order_item = get_object_or_404(OrderItem, id=item_id)
     order = order_item.order
-    # Only allow deletion if order isn't paid
-    if order.payment_status == 'UNPAID':
+    
+    if order.payment_status != 'PAID':
         if order_item.quantity > 1:
             order_item.quantity -= 1
             order_item.save()
@@ -212,7 +287,7 @@ def delete_item(request):
 @require_http_methods(["POST"])
 def apply_discount(request, table_id):
     table = get_object_or_404(Table, id=table_id)
-    order = table.orders.filter(payment_status='UNPAID', is_cancelled=False).first()
+    order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
     if not order:
         return JsonResponse({'error': 'No active order found'}, status=400)
 
@@ -233,11 +308,13 @@ def apply_discount(request, table_id):
 @transaction.atomic
 def cancel_order(request, table_id):
     table = get_object_or_404(Table, id=table_id)
-    order = table.orders.filter(payment_status='UNPAID').first()
+    order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
     if order:
         order.is_cancelled = True
         order.cancel_reason = request.POST.get('cancel_reason', 'Customer left/Urgency')
         order.save()
+        table.status = 'AVAILABLE'
+        table.save()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Order not found'}, status=400)
 
@@ -245,7 +322,7 @@ def cancel_order(request, table_id):
 @require_http_methods(["POST"])
 def toggle_gst(request, table_id):
     table = get_object_or_404(Table, id=table_id)
-    order = table.orders.filter(payment_status='UNPAID', is_cancelled=False).first()
+    order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
     if order:
         order.apply_gst = not order.apply_gst
         order.save()
@@ -258,14 +335,16 @@ def toggle_gst(request, table_id):
 @transaction.atomic
 def settle_order(request, table_id):
     table = get_object_or_404(Table, id=table_id)
-    order = table.orders.filter(payment_status='UNPAID', is_cancelled=False).first()
+    order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
     if order:
-        # Get desired status (PAID or PENDING) from the request
         target_status = request.POST.get('payment_status', 'PAID')
         order.payment_mode = request.POST.get('payment_mode', 'CASH')
         order.payment_status = target_status
         order.is_settled = True if target_status == 'PAID' else False
         order.save()
+        if target_status == 'PAID':
+            table.status = 'AVAILABLE'
+            table.save()
         return JsonResponse({'success': True, 'status': target_status})
     return JsonResponse({'error': 'Order not found'}, status=400)
 
@@ -275,7 +354,7 @@ def update_order_type(request):
     table_id = request.POST.get('table_id')
     order_type = request.POST.get('order_type')
     table = get_object_or_404(Table, id=table_id)
-    active_order = table.orders.filter(payment_status='UNPAID', is_cancelled=False).first()
+    active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
     if active_order:
         active_order.order_type = order_type
         active_order.save()
@@ -290,7 +369,7 @@ def update_order_type(request):
 def mark_attendance(request):
     """Staff Check-in and Check-out with Separate Actions"""
     employee_id = request.POST.get('employee_id')
-    action = request.POST.get('action') # Expects 'IN' or 'OUT'
+    action = request.POST.get('action') 
     employee = get_object_or_404(Employee, id=employee_id)
     today = timezone.now().date()
     
@@ -301,7 +380,6 @@ def mark_attendance(request):
             date=today,
             defaults={'is_present': True}
         )
-        
         if not created:
             return JsonResponse({'error': 'Already checked in for today'}, status=400)
         
@@ -314,10 +392,8 @@ def mark_attendance(request):
     # 🔴 CASE 2: CHECK-OUT
     elif action == 'OUT':
         attendance = Attendance.objects.filter(employee=employee, date=today).first()
-        
         if not attendance:
             return JsonResponse({'error': 'No Check-In record found for today'}, status=400)
-        
         if attendance.check_out:
             return JsonResponse({'error': 'Already checked out for today'}, status=400)
             
@@ -417,21 +493,117 @@ def get_order_status(request, table_id):
     order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
     if not order:
         return JsonResponse({'active': False})
+    
+    items_list = []
+    for i in order.items.filter(is_cancelled=False):
+        items_list.append({
+            'id': i.id, 
+            'menu_item_id': i.menu_variant.menu_item.id, 
+            'name': i.menu_variant.menu_item.name, 
+            'qty': i.quantity, 
+            'price': float(i.total_price)
+        })
+
     return JsonResponse({
         'active': True, 
         'order_type': order.order_type, 
         'payment_status': order.payment_status, 
-        'items': [{'id': i.id, 'name': i.menu_variant.menu_item.name, 'qty': i.quantity, 'price': float(i.total_price)} for i in order.items.filter(is_cancelled=False)], 
+        'apply_gst': order.apply_gst,
+        'items': items_list, 
         'grand_total': float(order.grand_total)
     })
 
 def print_invoice(request, table_id):
-    order = get_object_or_404(Table, id=table_id).orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+    table = get_object_or_404(Table, id=table_id)
+    order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+    if not order:
+        order = table.orders.filter(is_cancelled=False, payment_status='PAID').last()
     return render(request, 'pos/print_invoice.html', {'order': order, 'restaurant': Restaurant.objects.first()})
 
 def print_kot(request, table_id):
-    order = get_object_or_404(Table, id=table_id).orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+    table = get_object_or_404(Table, id=table_id)
+    order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+    
+    if not order:
+        return HttpResponse("No active order found.")
+        
     items_qs = order.items.filter(is_printed_to_kitchen=False, is_cancelled=False)
-    resp = render(request, 'pos/print_kot.html', {'order': order, 'items': list(items_qs)})
-    items_qs.update(is_printed_to_kitchen=True)
-    return resp
+    
+    if not items_qs.exists():
+        items_to_show = order.items.filter(is_cancelled=False)
+    else:
+        items_to_show = list(items_qs)
+        items_qs.update(is_printed_to_kitchen=True)
+    
+    return render(request, 'pos/print_kot.html', {
+        'order': order, 
+        'items': items_to_show,
+        'current_time': timezone.now()
+    })
+
+# ==========================================
+# 🍴 NEW: MENU MANAGEMENT VIEWS
+# ==========================================
+def menu_management(request):
+    """Main interface for toggling availability and price changes"""
+    if not request.user.is_staff:
+        return redirect('admin:login')
+    
+    categories = Category.objects.all().prefetch_related('menuitem_set__variants')
+    query = request.GET.get('q')
+    if query:
+        categories = Category.objects.filter(
+            menuitem_set__name__icontains=query
+        ).distinct().prefetch_related('menuitem_set__variants')
+
+    return render(request, 'pos/menu_management.html', {
+        'categories': categories,
+        'restaurant_name': Restaurant.objects.first().name if Restaurant.objects.exists() else "KOSHUR POS"
+    })
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def toggle_item_status(request):
+    item_id = request.POST.get('item_id')
+    item = get_object_or_404(MenuItem, id=item_id)
+    item.is_available = not item.is_available
+    item.save()
+    return JsonResponse({'success': True, 'is_available': item.is_available})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_item_price(request):
+    item_id = request.POST.get('item_id')
+    new_price = request.POST.get('price')
+    item = get_object_or_404(MenuItem, id=item_id)
+    variant = item.variants.first()
+    if variant:
+        variant.price = new_price
+        variant.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def delete_menu_item(request):
+    item_id = request.POST.get('item_id')
+    try:
+        item = MenuItem.objects.get(id=item_id)
+        
+        # Check if it has been sold before
+        has_sales = OrderItem.objects.filter(menu_variant__menu_item=item).exists()
+        
+        if has_sales:
+            # Soft Delete: Just make it unavailable and hide it
+            item.is_available = False
+            # We can add a custom field like 'is_archived' if you want to be fancy, 
+            # but setting is_available to False usually does the trick for the POS.
+            item.save()
+            return JsonResponse({'success': True, 'message': 'Item archived (has sales data)'})
+        else:
+            # Permanent Delete: If it was never sold, we can safely delete it
+            item.delete()
+            return JsonResponse({'success': True, 'message': 'Item deleted permanently'})
+            
+    except MenuItem.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)

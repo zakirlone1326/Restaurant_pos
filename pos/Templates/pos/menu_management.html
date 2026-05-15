@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Control | KOSHUR POS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --saffron: #f97316; --dark: #0f172a; --light: #f8fafc; --danger: #ef4444; }
+        body { font-family: 'Inter', sans-serif; background: var(--light); color: var(--dark); margin: 0; padding-bottom: 100px; }
+        
+        .header { background: var(--dark); color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        .controls-bar { max-width: 600px; margin: 20px auto; padding: 0 15px; display: flex; gap: 10px; }
+        .search-bar { flex: 1; padding: 14px 20px; border-radius: 14px; border: 1px solid #e2e8f0; font-size: 1rem; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .bulk-btn { background: var(--saffron); color: white; border: none; padding: 0 20px; border-radius: 14px; font-weight: 800; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; }
+
+        .category-section { max-width: 600px; margin: 24px auto; padding: 0 15px; }
+        .category-title { font-size: 0.8rem; font-weight: 800; color: var(--saffron); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; border-bottom: 2px solid #fed7aa; display: inline-block; padding-bottom: 4px; }
+
+        .item-card { background: white; border-radius: 20px; padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border: 1px solid transparent; }
+        .item-card.inactive { opacity: 0.6; background: #f1f5f9; }
+        
+        .item-info { flex: 1; }
+        .item-info h4 { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--dark); }
+        
+        .price-container { margin-top: 5px; display: flex; align-items: center; gap: 4px; font-weight: 800; color: var(--dark); }
+        .price-input { border: 1px solid transparent; font-weight: 800; color: var(--dark); font-size: 1rem; width: 80px; padding: 6px; border-radius: 8px; background: transparent; outline: none; }
+        .price-input.editing { border-color: var(--saffron); background: #fffbeb; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); }
+
+        .actions { display: flex; align-items: center; gap: 15px; }
+        .del-btn { color: #cbd5e1; background: none; border: none; font-size: 1.3rem; cursor: pointer; transition: color 0.2s; padding: 5px; }
+        .del-btn:hover { color: var(--danger); }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .3s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--saffron); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        
+        .save-banner { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 16px 32px; border-radius: 50px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; font-size: 0.9rem; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2 style="margin:0; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px;">MENU CONTROL</h2>
+    <a href="/admin/" style="color:white; text-decoration:none; font-size:0.85rem; font-weight:700; border: 1.5px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 10px;">DASHBOARD</a>
+</div>
+
+<div class="controls-bar">
+    <input type="text" id="searchInput" class="search-bar" placeholder="Find a dish..." onkeyup="filterItems()">
+    <button class="bulk-btn" id="bulkModeBtn" onclick="toggleBulkEdit()">Edit Prices</button>
+</div>
+
+{% for category in categories %}
+<div class="category-section" id="cat-{{ category.id }}">
+    <div class="category-title">{{ category.name }}</div>
+    {% for item in category.menuitem_set.all %}
+    <div class="item-card {% if not item.is_available %}inactive{% endif %}" id="item-row-{{ item.id }}">
+        <div class="item-info">
+            <h4>{{ item.name }}</h4>
+            <div class="price-container">
+                <span>₹</span>
+                <input type="number" class="price-input" 
+                    value="{{ item.variants.first.price|floatformat:0 }}" 
+                    readonly 
+                    onchange="updatePrice('{{ item.id }}', this.value)">
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button class="del-btn" title="Delete Item" onclick="deleteItem('{{ item.id }}', '{{ item.name }}')">🗑️</button>
+            <label class="switch">
+                <input type="checkbox" {% if item.is_available %}checked{% endif %} onchange="toggleStatus('{{ item.id }}')">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+<div id="saveBanner" class="save-banner">UPDATING MENU...</div>
+
+<script>
+let isBulkMode = false;
+
+function toggleBulkEdit() {
+    isBulkMode = !isBulkMode;
+    const inputs = document.querySelectorAll('.price-input');
+    const btn = document.getElementById('bulkModeBtn');
+    
+    inputs.forEach(input => {
+        input.readOnly = !isBulkMode;
+        input.classList.toggle('editing', isBulkMode);
+    });
+    
+    btn.innerText = isBulkMode ? "FINISH" : "EDIT PRICES";
+    btn.style.background = isBulkMode ? "var(--dark)" : "var(--saffron)";
+}
+
+function updatePrice(itemId, newPrice) {
+    if(!newPrice || newPrice < 0) return;
+    showBanner("UPDATING PRICE...");
+    const formData = new FormData();
+    formData.append('item_id', itemId);
+    formData.append('price', newPrice);
+
+    fetch('/update-item-price/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    }).then(res => res.json())
+      .then(data => data.success ? hideBanner() : alert("Price update failed"));
+}
+
+function toggleStatus(itemId) {
+    showBanner("CHANGING STATUS...");
+    const card = document.getElementById(`item-row-${itemId}`);
+    const formData = new FormData();
+    formData.append('item_id', itemId);
+
+    fetch('/toggle-item-status/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    }).then(res => res.json())
+      .then(data => {
+          if(data.success) {
+              card.classList.toggle('inactive', !data.is_available);
+              hideBanner();
+          }
+      });
+}
+
+function deleteItem(itemId, itemName) {
+    if (confirm(`Delete ${itemName}? This removes the item and all its prices forever.`)) {
+        showBanner("DELETING...");
+        
+        const formData = new FormData();
+        formData.append('item_id', itemId);
+
+        fetch('/delete-menu-item/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: formData
+        })
+        .then(response => response.json()) // Force response to JSON
+        .then(data => {
+            if (data.success) {
+                const row = document.getElementById(`item-row-${itemId}`);
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.remove();
+                    hideBanner();
+                }, 300);
+            } else {
+                // This will now show you the ACTUAL error from Django
+                alert("Could not delete: " + data.error);
+                hideBanner();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Network error or URL mismatch.");
+            hideBanner();
+        });
+    }
+}
+
+function filterItems() {
+    let input = document.getElementById('searchInput').value.toLowerCase();
+    let cards = document.querySelectorAll('.item-card');
+    cards.forEach(card => {
+        let name = card.querySelector('h4').innerText.toLowerCase();
+        card.style.display = name.includes(input) ? 'flex' : 'none';
+    });
+}
+
+function showBanner(text) { 
+    const banner = document.getElementById('saveBanner');
+    banner.innerText = text;
+    banner.style.display = 'block'; 
+}
+function hideBanner() { 
+    setTimeout(() => { document.getElementById('saveBanner').style.display = 'none'; }, 800); 
+}
+</script>
+
+</body>
+</html>
