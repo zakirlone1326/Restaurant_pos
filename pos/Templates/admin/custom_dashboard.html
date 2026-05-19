@@ -78,6 +78,8 @@
 
         .sidebar-brand span { color: var(--saffron); }
 
+        .sidebar-brand span { color: var(--saffron); }
+
         .sidebar-section {
             padding: 20px 32px 10px 32px;
             font-size: 0.7rem;
@@ -110,6 +112,18 @@
             justify-content: space-between; 
             align-items: center; 
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            /* FIXED LAYOUT CORRECTION CODE INSIDE PREVIOUS CLASS */
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+        }
+
+        /* SCROLLABLE MAIN BODY CONTAINER CORRECTION CODE */
+        .main-content-wrapper {
+            padding-top: 100px; /* Pushes content down so it doesn't clip behind fixed header */
+            box-sizing: border-box;
         }
 
         .header-btn {
@@ -266,10 +280,8 @@
 </head>
 <body>
 
-    <!-- OVERLAY -->
     <div id="mainOverlay" class="overlay" onclick="closeNav()"></div>
 
-    <!-- SIDEBAR -->
     <div id="mySidebar" class="sidebar">
         <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">×</a>
         <div class="sidebar-brand">KOSHUR <span>POS</span></div>
@@ -287,7 +299,6 @@
         <div class="sidebar-section">SYSTEM</div>
         <a href="/admin/core/">⚙️ Admin Panel</a>
         
-        <!-- SECURE LOGOUT FORM -->
         <form action="{% url 'logout' %}" method="post" id="logout-form" style="display: none;">
             {% csrf_token %}
         </form>
@@ -296,7 +307,6 @@
         </button>
     </div>
 
-    <!-- HEADER -->
     <div class="header">
         <div style="display: flex; align-items: center; gap: 15px;">
             <span style="font-size:30px; cursor:pointer; color: var(--saffron); line-height: 1;" onclick="openNav()">&#9776;</span>
@@ -305,160 +315,155 @@
         <a href="/table/" class="header-btn">Live Floor</a>
     </div>
 
-    <!-- SALES CARD -->
-    <div class="sales-track-card">
-        <div class="card-header">
-            <h2 style="font-size: 0.8rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1px;">Sales Overview</h2>
-            <form id="rangeForm" method="GET" class="range-selector">
-                <select name="period" id="periodSelect" onchange="toggleDateInputs()">
-                    <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
-                    <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
-                    <option value="7days" {% if period == '7days' %}selected{% endif %}>Last 7 Days</option>
-                    <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
-                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
-                </select>
-                <div id="customDateContainer" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %}; gap: 5px; margin-top: 10px;">
-                    <input type="date" name="start_date" value="{{ start_date }}">
-                    <input type="date" name="end_date" value="{{ end_date }}">
-                    <button type="submit" style="background:var(--saffron); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">OK</button>
-                </div>
-            </form>
-        </div>
+    <div class="main-content-wrapper">
 
-        <div class="main-summary">
-            <span style="color: var(--slate-200); font-weight: 800; font-size: 1.5rem; vertical-align: top;">₹</span>
-            <h1>{{ revenue|floatformat:0 }}</h1>
-            <p>{{ order_count }} Orders Completed</p>
-        </div>
+        <div class="sales-track-card">
+            <div class="card-header">
+                <h2 style="font-size: 0.8rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1px;">Sales Overview</h2>
+                <form id="rangeForm" method="GET" class="range-selector">
+                    <select name="period" id="periodSelect" onchange="toggleDateInputs()">
+                        <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                        <option value="yesterday" {% if period == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                        <option value="7days" {% if period == '7days' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                    <div id="customDateContainer" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %}; gap: 5px; margin-top: 10px;">
+                        <input type="date" name="start_date" value="{{ start_date }}">
+                        <input type="date" name="end_date" value="{{ end_date }}">
+                        <button type="submit" style="background:var(--saffron); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">OK</button>
+                    </div>
+                </form>
+            </div>
 
-        <!-- UPDATED GRAPH SECTION -->
-         
-        <div class="chart-container">
-    {% for item in graph_data %}
-        <div class="bar" 
-             style="height: {{ item.pct }}%;" 
-             data-label="{{ item.range_label }}" 
-             data-sales="{{ item.amount|floatformat:0 }}">
-        </div>
-    {% endfor %}
-</div>
+            <div class="main-summary">
+                <span style="color: var(--slate-200); font-weight: 800; font-size: 1.5rem; vertical-align: top;">₹</span>
+                <h1>{{ revenue|floatformat:0 }}</h1>
+                <p>{{ order_count }} Orders Completed</p>
+            </div>
 
-<div class="chart-labels">
-    <!-- Shows 10 am, 2 pm, etc. on the bottom axis -->
-    {% for item in graph_data %}
-        <span>{{ item.point_label }}</span>
-    {% endfor %}
-</div>
+            <div class="chart-container">
+                {% for item in graph_data %}
+                    <div class="bar" 
+                         style="height: {{ item.pct }}%;" 
+                         data-label="{{ item.range_label }}" 
+                         data-sales="{{ item.amount|floatformat:0 }}">
+                    </div>
+                {% endfor %}
+            </div>
 
-        <!-- ORDER TYPE BREAKDOWN -->
-        <div style="margin-top: 40px; border-top: 1px solid var(--light-gray); padding-top: 24px;">
-            <div class="category-row">
-                <div class="type-info">
-                    <div class="icon-box" style="background: #fdf2f2; color: #ef4444;">🍽️</div>
-                    <div>
-                        <div style="font-weight: 700;">Dine In</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ dine_in.avg|floatformat:0 }}</div>
+            <div class="chart-labels">
+                {% for item in graph_data %}
+                    <span>{{ item.point_label }}</span>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top: 40px; border-top: 1px solid var(--light-gray); padding-top: 24px;">
+                <div class="category-row">
+                    <div class="type-info">
+                        <div class="icon-box" style="background: #fdf2f2; color: #ef4444;">🍽️</div>
+                        <div>
+                            <div style="font-weight: 700;">Dine In</div>
+                            <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ dine_in.avg|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 800; font-size: 1.1rem;">₹{{ dine_in.rev|floatformat:0 }}</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ dine_in.count }} Orders</div>
                     </div>
                 </div>
-                <div style="text-align: right;">
-                    <div style="font-weight: 800; font-size: 1.1rem;">₹{{ dine_in.rev|floatformat:0 }}</div>
-                    <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ dine_in.count }} Orders</div>
-                </div>
-            </div>
 
-            <div class="category-row">
-                <div class="type-info">
-                    <div class="icon-box" style="background: #fffbeb; color: #f59e0b;">🛍️</div>
-                    <div>
-                        <div style="font-weight: 700;">Pick Up</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ pickup.avg|floatformat:0 }}</div>
+                <div class="category-row">
+                    <div class="type-info">
+                        <div class="icon-box" style="background: #fffbeb; color: #f59e0b;">🛍️</div>
+                        <div>
+                            <div style="font-weight: 700;">Pick Up</div>
+                            <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ pickup.avg|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 800; font-size: 1.1rem;">₹{{ pickup.rev|floatformat:0 }}</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ pickup.count }} Orders</div>
                     </div>
                 </div>
-                <div style="text-align: right;">
-                    <div style="font-weight: 800; font-size: 1.1rem;">₹{{ pickup.rev|floatformat:0 }}</div>
-                    <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ pickup.count }} Orders</div>
-                </div>
-            </div>
 
-            <div class="category-row" style="border-bottom: none;">
-                <div class="type-info">
-                    <div class="icon-box" style="background: #f0fdf4; color: #22c55e;">🛵</div>
-                    <div>
-                        <div style="font-weight: 700;">Delivery</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ delivery.avg|floatformat:0 }}</div>
+                <div class="category-row" style="border-bottom: none;">
+                    <div class="type-info">
+                        <div class="icon-box" style="background: #f0fdf4; color: #22c55e;">🛵</div>
+                        <div>
+                            <div style="font-weight: 700;">Delivery</div>
+                            <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ delivery.avg|floatformat:0 }}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 800; font-size: 1.1rem;">₹{{ delivery.rev|floatformat:0 }}</div>
+                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ delivery.count }} Orders</div>
                     </div>
                 </div>
-                <div style="text-align: right;">
-                    <div style="font-weight: 800; font-size: 1.1rem;">₹{{ delivery.rev|floatformat:0 }}</div>
-                    <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ delivery.count }} Orders</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>NET REVENUE</h3>
+                <p>₹{{ revenue|floatformat:0 }}</p>
+            </div>
+            <div class="card">
+                <h3>STAFF ACTIVE</h3>
+                <p>{{ staff_present }}</p>
+            </div>
+            <div class="card" style="border-top-color: var(--emerald);">
+                <h3 style="color: var(--slate-500);">ESTIMATED PROFIT</h3>
+                <p style="color: var(--emerald);">₹{{ profit|floatformat:0 }}</p>
+            </div>
+        </div>
+
+        <div class="sales-track-card">
+            <span class="saffron-tag">Revenue Leakage & Audit</span>
+            <div class="leakage-grid">
+                <div class="leakage-box">
+                    <span>Cancelled Bills</span>
+                    <b>{{ cancelled_bills|default:"0" }}</b>
+                </div>
+                <div class="leakage-box">
+                    <span>Cancelled KOTs</span>
+                    <b>{{ cancelled_kots|default:"0" }}</b>
+                </div>
+                <div class="leakage-box">
+                    <span>Total Discounts</span>
+                    <b>₹{{ total_discounts|floatformat:0 }}</b>
+                </div>
+                <div class="leakage-box">
+                    <span>Avg Order Value</span>
+                    <b>₹{{ aov|floatformat:0 }}</b>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- QUICK STATS -->
-    <div class="grid">
-        <div class="card">
-            <h3>NET REVENUE</h3>
-            <p>₹{{ revenue|floatformat:0 }}</p>
-        </div>
-        <div class="card">
-            <h3>STAFF ACTIVE</h3>
-            <p>{{ staff_present }}</p>
-        </div>
-        <div class="card" style="border-top-color: var(--emerald);">
-            <h3 style="color: var(--slate-500);">ESTIMATED PROFIT</h3>
-            <p style="color: var(--emerald);">₹{{ profit|floatformat:0 }}</p>
-        </div>
-    </div>
-
-    <!-- REVENUE LEAKAGE -->
-    <div class="sales-track-card">
-        <span class="saffron-tag">Revenue Leakage & Audit</span>
-        <div class="leakage-grid">
-            <div class="leakage-box">
-                <span>Cancelled Bills</span>
-                <b>{{ cancelled_bills|default:"0" }}</b>
+        <div class="sales-track-card">
+            <span class="saffron-tag">↑ Top Selling (Sales Wise)</span>
+            {% for item in top_sales %}
+            <div class="item-line">
+                <span style="font-weight: 600;">{{ item.menu_variant__menu_item__name }}</span>
+                <span>{{ item.pct|floatformat:1 }}% <b style="margin-left:12px; color: var(--dark);">₹{{ item.item_rev|floatformat:0 }}</b></span>
             </div>
-            <div class="leakage-box">
-                <span>Cancelled KOTs</span>
-                <b>{{ cancelled_kots|default:"0" }}</b>
+            {% endfor %}
+
+            <div style="margin-top: 32px;"></div>
+
+            <span class="saffron-tag">↓ Low Selling (Quantity Wise)</span>
+            {% for item in low_qty %}
+            <div class="item-line">
+                <span style="font-weight: 600; color: var(--slate-500);">{{ item.menu_variant__menu_item__name }}</span>
+                <span style="font-weight: 800;">{{ item.total_qty }} <small>Qty</small></span>
             </div>
-            <div class="leakage-box">
-                <span>Total Discounts</span>
-                <b>₹{{ total_discounts|floatformat:0 }}</b>
-            </div>
-            <div class="leakage-box">
-                <span>Avg Order Value</span>
-                <b>₹{{ aov|floatformat:0 }}</b>
-            </div>
+            {% endfor %}
         </div>
-    </div>
 
-    <!-- PRODUCT RANKINGS -->
-    <div class="sales-track-card">
-        <span class="saffron-tag">↑ Top Selling (Sales Wise)</span>
-        {% for item in top_sales %}
-        <div class="item-line">
-            <span style="font-weight: 600;">{{ item.menu_variant__menu_item__name }}</span>
-            <span>{{ item.pct|floatformat:1 }}% <b style="margin-left:12px; color: var(--dark);">₹{{ item.item_rev|floatformat:0 }}</b></span>
+        <div style="text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
+            POWERED BY KOSHUR POS • 2026
         </div>
-        {% endfor %}
 
-        <div style="margin-top: 32px;"></div>
-
-        <span class="saffron-tag">↓ Low Selling (Quantity Wise)</span>
-        {% for item in low_qty %}
-        <div class="item-line">
-            <span style="font-weight: 600; color: var(--slate-500);">{{ item.menu_variant__menu_item__name }}</span>
-            <span style="font-weight: 800;">{{ item.total_qty }} <small>Qty</small></span>
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- FOOTER INFO -->
-    <div style="text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
-        POWERED BY KOSHUR POS • 2026
     </div>
 
     <script>
