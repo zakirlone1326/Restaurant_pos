@@ -38,4 +38,7 @@ urlpatterns = [
 
      path('login/', auth_views.LoginView.as_view(), name='login'),
      path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+
+     path('pos/direct-order/', views.billing_screen, name='billing_screen_direct'),
+    path('api/orders/create-direct/', views.create_direct_order, name='create_direct_order'),
 ]

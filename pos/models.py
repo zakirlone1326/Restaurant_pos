@@ -2,7 +2,9 @@ from django.db import models
 from decimal import Decimal
 from django.utils import timezone
 
+# ==========================================
 # 🏢 RESTAURANT PROFILE
+# ==========================================
 class Restaurant(models.Model):
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True, null=True)
@@ -13,7 +15,9 @@ class Restaurant(models.Model):
     def __str__(self):
         return self.name
 
+# ==========================================
 # 📍 TABLE MANAGEMENT
+# ==========================================
 class Table(models.Model):
     STATUS_CHOICES = [
         ('AVAILABLE', '🟢 Available'),
@@ -31,11 +35,13 @@ class Table(models.Model):
     def __str__(self):
         return f"Table {self.table_number}"
 
+# ==========================================
 # 📂 MENU ORGANIZATION
+# ==========================================
 class Category(models.Model):
     name = models.CharField(max_length=100)
     class Meta:
-        verbose_name_plural = "Categories"
+        verbose_name_plural = "Expense Categories" if "Expense" in locals() else "Categories"
     def __str__(self):
         return self.name
 
@@ -57,7 +63,9 @@ class MenuVariant(models.Model):
     def __str__(self):
         return f"{self.menu_item.name} ({self.size_name})"
 
+# ==========================================
 # 🧾 CORE ORDER & BILLING
+# ==========================================
 class Order(models.Model):
     ORDER_TYPES = [
         ('DINE_IN', '🍽️ Dine In'),
@@ -78,9 +86,13 @@ class Order(models.Model):
 
     table = models.ForeignKey(Table, on_delete=models.SET_NULL, related_name='orders', null=True, blank=True)
     order_type = models.CharField(max_length=20, choices=ORDER_TYPES, default='DINE_IN')
-    customer_name = models.CharField(max_length=100, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
     
+    # Updated & New Customer Fields for Direct/Delivery Profiles
+    customer_name = models.CharField(max_length=100, blank=True, null=True)
+    customer_phone = models.CharField(max_length=15, blank=True, null=True)
+    delivery_address = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
     payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS, default='UNPAID')
     payment_mode = models.CharField(max_length=10, choices=PAYMENT_MODES, blank=True, null=True)
     is_settled = models.BooleanField(default=False) 
@@ -120,6 +132,7 @@ class Order(models.Model):
         self.save()
 
     def save(self, *args, **kwargs):
+        # FIX: Check if table exists before applying layout updates to avoid attribute errors
         if self.table:
             if self.is_cancelled or self.payment_status == 'PAID':
                 self.table.status = 'AVAILABLE'
@@ -132,7 +145,9 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.id} - {self.get_order_type_display()}"
 
+# ==========================================
 # 🍽️ LINE ITEMS
+# ==========================================
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_variant = models.ForeignKey(MenuVariant, on_delete=models.PROTECT)
@@ -151,7 +166,9 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.quantity} x {self.menu_variant.menu_item.name} ({'CANCELLED' if self.is_cancelled else 'ACTIVE'})"
 
+# ==========================================
 # 👥 STAFF MANAGEMENT
+# ==========================================
 class Employee(models.Model):
     ROLE_CHOICES = [
         ('MANAGER', 'Manager'), 
@@ -169,7 +186,9 @@ class Employee(models.Model):
     def __str__(self):
         return f"{self.name} ({self.role})"
 
+# ==========================================
 # 🕒 ATTENDANCE
+# ==========================================
 class Attendance(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='attendance_records')
     date = models.DateField(default=timezone.now)
@@ -184,7 +203,9 @@ class Attendance(models.Model):
     def __str__(self):
         return f"{self.employee.name} - {self.date}"
 
+# ==========================================
 # 💰 SALARY PAYMENTS
+# ==========================================
 class SalaryPayment(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payments')
     payment_date = models.DateField(default=timezone.now)
@@ -197,7 +218,6 @@ class SalaryPayment(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         if is_new:
-            # Trigger Salary Notification
             from .utils import send_staff_notification
             msg = (f"Hi {self.employee.name}, your salary for {self.month_year} "
                    f"of ₹{self.amount_paid} has been credited. "
@@ -207,7 +227,9 @@ class SalaryPayment(models.Model):
     def __str__(self):
         return f"Salary: {self.employee.name} ({self.month_year})"
 
+# ==========================================
 # 📊 EXPENSES
+# ==========================================
 class ExpenseCategory(models.Model):
     name = models.CharField(max_length=100)
     class Meta:

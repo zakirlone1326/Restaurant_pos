@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KOSHUR POS | Table {{ table.table_number }}</title>
+    <title>KOSHUR POS | {% if table %}Table {{ table.table_number }}{% else %}{{ direct_order.get_order_type_display }}{% endif %}</title>
     <style>
         :root {
             --primary-saffron: #f97316; 
@@ -95,6 +95,11 @@
         .modal-content { background: white; padding: 25px; border-radius: 15px; width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
         .pay-opt { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 10px; font-weight: 700; cursor: pointer; text-align: left; transition: 0.2s; background: #fff; }
         .pay-opt:hover { border-color: var(--primary-saffron); background: #fff7ed; }
+        
+        .customer-meta-bar {
+            background: #f8fafc; padding: 8px 15px; border-bottom: 1px solid var(--border-color);
+            font-size: 0.8rem; color: #475569; font-weight: 600; display: flex; flex-direction: column; gap: 2px;
+        }
     </style>
 </head>
 <body>
@@ -102,9 +107,11 @@
     <header>
         <div style="display: flex; align-items: center; gap: 15px;">
             <a href="{% url 'table_dashboard' %}" style="color:white; text-decoration:none; font-size:0.75rem; font-weight:600; border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:5px;">EXIT</a>
-            <h2 style="margin:0; font-size: 1.2rem;">TABLE {{ table.table_number }}</h2>
+            <h2 style="margin:0; font-size: 1.2rem;">
+                {% if table %}TABLE {{ table.table_number }}{% else %}ORDER #{{ direct_order.id }} ({{ direct_order.get_order_type_display }}){% endif %}
+            </h2>
         </div>
-        <span id="payment-status-tag" style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; padding: 4px 10px; border-radius: 4px;">KOSHUR POS • PREMIUM</span>
+        <span id="payment-status-tag" style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; padding: 4px 10px; border-radius: 4px;">KOSHUR POS</span>
     </header>
 
     <div class="main-wrapper">
@@ -112,24 +119,23 @@
         <main class="menu-area" id="food-grid"></main>
 
         <aside class="order-panel">
+            {% if direct_order and direct_order.order_type == 'DELIVERY' %}
+            <div class="customer-meta-bar">
+                <div>👤 Customer: {{ direct_order.customer_name }} ({{ direct_order.customer_phone }})</div>
+                <div style="font-weight: 400; color: #64748b; font-size:0.75rem;">📍 {{ direct_order.delivery_address }}</div>
+            </div>
+            {% endif %}
+
             <div class="items-scroll" id="order-list"></div>
 
             <div class="controls-section">
-                <div class="compact-row">
-                    <div class="action-container">
-                        <button class="menu-trigger" onclick="toggleDrop('typeDrop')">
-                            <span>TYPE: <b id="current-type-label" style="color:var(--primary-saffron)">DINE IN</b></span>
-                            <span>⋮</span>
-                        </button>
-                        <div id="typeDrop" class="dropdown-box">
-                            <button onclick="setOrderType('DINE_IN')">🍽️ DINE IN</button>
-                            <button onclick="setOrderType('PICK_UP')">🥡 PICK UP</button>
-                            <button onclick="setOrderType('DELIVERY')">🚚 DELIVERY</button>
-                        </div>
+                <div class="compact-row" style="justify-content: flex-end; gap: 8px;">
+                    <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 5px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; color: var(--text-main); user-select: none; cursor: default; white-space: nowrap;">
+                        TYPE: <span id="current-type-label" style="color: var(--primary-saffron); text-transform: uppercase;">{% if table %}DINE IN{% else %}{{ direct_order.get_order_type_display }}{% endif %}</span>
                     </div>
                     <div class="gst-pill" id="gst-toggle" onclick="toggleGST()">GST</div>
                 </div>
-
+            </div>
                 <div class="compact-row">
                     <div class="action-container">
                         <button class="menu-trigger" onclick="toggleDrop('actionDrop')" style="background: var(--primary-dark); color: white; border:none;">
@@ -144,24 +150,28 @@
                         </div>
                     </div>
                 </div>
-            </div>
+
+                
 
             <div class="total-box">
                 <span style="font-size: 0.75rem; color: #64748b;">GRAND TOTAL</span>
                 <span id="total-val">₹0.00</span>
             </div>
 
-            <button onclick="openSettleModal()" class="settle-btn">SETTLE & CLEAR TABLE</button>
+            <button onclick="openSettleModal()" class="settle-btn">{% if table %}SETTLE & CLEAR TABLE{% else %}SETTLE ORDER{% endif %}</button>
         </aside>
     </div>
 
     <div id="settleModal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top:0">Choose Payment Method</h3>
-            <p style="font-size: 0.8rem; color: #64748b;">Table {{ table.table_number }} will be released after settlement.</p>
+            <p style="font-size: 0.8rem; color: #64748b;">
+                {% if table %}Table {{ table.table_number }} will be released after settlement.{% else %}Order will be marked completed.{% endif %}
+            </p>
             <button class="pay-opt" onclick="finishSettlement('CASH')">💵 CASH PAYMENT</button>
-            <button class="pay-opt" onclick="finishSettlement('UPI')">📱 UPI / QR CODE</button>
-            <button class="pay-opt" onclick="finishSettlement('CARD')">💳 CARD PAYMENT</button>
+            <button class="pay-opt" onclick="finishSettlement('ONLINE')">📱 UPI / QR CODE</button>
+            <button class="pay-opt" onclick="finishSettlement('CARD')">💳 CARD PAYMENT</button> <button onclick="closeModal('settleModal')" style="width:100%; background:none; border:none; color:#94a3b8; font-weight:600; cursor:pointer; margin-top:10px;"></button>
+
             <button onclick="closeModal('settleModal')" style="width:100%; background:none; border:none; color:#94a3b8; font-weight:600; cursor:pointer; margin-top:10px;">Go Back</button>
         </div>
     </div>
@@ -183,10 +193,15 @@
     </div>
 
     <script>
-        const tableId = "{{ table.id }}";
+        const tableId = "{{ table.id|default:'' }}";
+        const orderId = "{{ direct_order.id|default:'' }}";
         let isUpdatingType = false;
 
         const getCSRF = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+        function getStatusURL() {
+            return tableId ? `/table/${tableId}/status/` : `/table/0/status/?order_id=${orderId}`;
+        }
 
         function toggleDrop(id) {
             const el = document.getElementById(id);
@@ -229,14 +244,15 @@
 
         async function addFood(itemId) {
             const fd = new FormData();
-            fd.append('table_id', tableId);
+            if (tableId) fd.append('table_id', tableId);
+            if (orderId) fd.append('order_id', orderId);
             fd.append('menu_item_id', itemId);
             const response = await fetch('/add-item/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(response.ok) syncOrder();
         }
 
         async function syncOrder() {
-            const res = await fetch(`/table/${tableId}/status/`);
+            const res = await fetch(getStatusURL());
             const data = await res.json();
             const list = document.getElementById('order-list');
             const tag = document.getElementById('payment-status-tag');
@@ -244,11 +260,11 @@
             if(!data.active || !data.items || data.items.length === 0) {
                 list.innerHTML = '<div style="text-align:center; color:#94a3b8; margin-top:50px;">Empty Cart</div>';
                 document.getElementById('total-val').innerText = '₹0.00';
-                tag.style.background = "none"; tag.style.color = "#94a3b8"; tag.innerText = "KOSHUR POS • PREMIUM";
+                tag.style.background = "none"; tag.style.color = "#94a3b8"; tag.innerText = "KOSHUR POS";
                 return;
             }
 
-            tag.innerText = data.payment_status === 'PENDING' ? "PAYMENT PENDING" : "KOSHUR POS • PREMIUM";
+            tag.innerText = data.payment_status === 'PENDING' ? "PAYMENT PENDING" : "KOSHUR POS";
             tag.style.background = data.payment_status === 'PENDING' ? "var(--pending)" : "none";
             tag.style.color = data.payment_status === 'PENDING' ? "white" : "#94a3b8";
 
@@ -265,6 +281,8 @@
 
             document.getElementById('total-val').innerText = `₹${parseFloat(data.grand_total).toFixed(2)}`;
             document.getElementById('gst-toggle').classList.toggle('active', data.apply_gst);
+            
+            // Clean dynamic text presentation update without breaking structure positions
             document.getElementById('current-type-label').innerText = (data.order_type || 'DINE_IN').replace('_', ' ');
         }
 
@@ -276,20 +294,11 @@
         }
 
         async function toggleGST() {
-            await fetch(`/table/${tableId}/toggle-gst/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()} });
+            const targetUrl = tableId ? `/table/${tableId}/toggle-gst/` : `/table/0/toggle-gst/?order_id=${orderId}`;
+            await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()} });
             syncOrder();
         }
 
-        async function setOrderType(type) {
-            const fd = new FormData();
-            fd.append('table_id', tableId);
-            fd.append('order_type', type);
-            await fetch('/update-order-type/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
-            document.getElementById('typeDrop').classList.remove('show');
-            syncOrder();
-        }
-
-        // Logic for Settlement
         function openSettleModal() {
             document.getElementById('settleModal').style.display = 'flex';
         }
@@ -298,9 +307,10 @@
             const fd = new FormData();
             fd.append('payment_mode', mode);
             fd.append('payment_status', 'PAID'); 
-            const res = await fetch(`/table/${tableId}/settle/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            
+            const targetUrl = tableId ? `/table/${tableId}/settle/` : `/table/0/settle/?order_id=${orderId}`;
+            const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) {
-                // Table released in views.py, now redirect to dashboard
                 window.location.href = '/table/';
             }
         }
@@ -310,7 +320,9 @@
             fd.append('discount_value', document.getElementById('discount-val').value);
             fd.append('discount_type', document.getElementById('discount-type').value);
             fd.append('discount_note', document.getElementById('discount-note').value);
-            const res = await fetch(`/table/${tableId}/apply-discount/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            
+            const targetUrl = tableId ? `/table/${tableId}/apply-discount/` : `/table/0/apply-discount/?order_id=${orderId}`;
+            const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) { closeModal('discountModal'); syncOrder(); }
         }
 
@@ -319,14 +331,25 @@
             if(!reason) return;
             const fd = new FormData();
             fd.append('cancel_reason', reason);
-            const res = await fetch(`/table/${tableId}/cancel-order/`, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+            
+            const targetUrl = tableId ? `/table/${tableId}/cancel-order/` : `/table/0/cancel-order/?order_id=${orderId}`;
+            const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) window.location.href = '/table/';
         }
 
         function openDiscountModal() { document.getElementById('discountModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function printKOT() { window.open(`/table/${tableId}/print-kot/`); }
-        function printBill() { window.open(`/table/${tableId}/print-invoice/`, '_blank'); }
+        
+        function printKOT() { 
+            const timestamp = new Date().getTime();
+            const targetUrl = tableId ? `/table/${tableId}/print-kot/?t=${timestamp}` : `/table/0/print-kot/?order_id=${orderId}&t=${timestamp}`;
+            window.open(targetUrl); 
+        }
+        function printBill() { 
+            const timestamp = new Date().getTime();
+            const targetUrl = tableId ? `/table/${tableId}/print-invoice/?t=${timestamp}` : `/table/0/print-invoice/?order_id=${orderId}&t=${timestamp}`;
+            window.open(targetUrl, '_blank'); 
+        }
     </script>
 </body>
 </html>

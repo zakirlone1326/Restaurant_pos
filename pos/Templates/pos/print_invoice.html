@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bill - Table {{ order.table.table_number }}</title>
+    <title>Bill - {% if order.table %}Table {{ order.table.table_number }}{% else %}{{ order.get_order_type_display }}{% endif %} #{{ order.id }}</title>
     <style>
         body { width: 80mm; font-family: 'Courier New', monospace; padding: 10px; margin: 0; background: white; color: #000; }
         .center { text-align: center; }
@@ -11,18 +11,37 @@
         .totals { border-top: 1px dashed #000; margin-top: 10px; padding-top: 8px; }
         .grand-total { font-weight: bold; font-size: 18px; margin-top: 5px; border-top: 1px solid #000; padding-top: 5px; }
         .footer { margin-top: 20px; font-size: 12px; border-top: 1px dashed #000; padding-top: 10px; }
+        .customer-card { text-align: left; font-size: 12px; margin: 10px 0 5px 0; padding: 5px 0; border-top: 1px dashed #000; }
         @media print { .no-print { display: none; } }
     </style>
 </head>
 <body onload="window.print()">
+
     <div class="header center">
-        <h2 style="margin: 0; font-size: 20px;">{{ order.table.restaurant.name|upper }}</h2>
-        <p style="margin: 5px 0; font-size: 11px;">{{ order.table.restaurant.address|default:"Premium Restaurant & Cafe" }}</p>
-        <p style="margin: 2px 0; font-size: 11px;">Ph: {{ order.table.restaurant.phone|default:"+91 XXXXXXXXXX" }}</p>
+        <h2 style="margin: 0; font-size: 20px;">{{ restaurant.name|default:"ZERO MILES KUPWARA"|upper }}</h2>
+        <p style="margin: 5px 0; font-size: 11px;">{{ restaurant.address|default:"Al-Shayan complex, iqbal market opposite sdh Kupwara" }}</p>
+        <p style="margin: 2px 0; font-size: 11px;">Ph: {{ restaurant.phone|default:"9149556866" }}</p>
+        
         <p style="margin: 10px 0 0 0; font-weight: bold; border-top: 1px solid #eee; padding-top: 5px;">
-            TABLE: {{ order.table.table_number }} | Bill #{{ order.id }}
+            {% if order.table %}
+                TABLE: {{ order.table.table_number }}
+            {% else %}
+                TYPE: {{ order.get_order_type_display|upper }}
+            {% endif %} 
+            | Bill #{{ order.id }}
         </p>
         <p style="margin: 2px 0; font-size: 10px;">Date: {{ order.created_at|date:"d/m/Y H:i" }}</p>
+
+        {% if order.customer_name or order.customer_phone or order.delivery_address %}
+        <div class="customer-card">
+            <div style="font-weight: bold; margin-bottom: 3px; text-transform: uppercase;">Customer Details:</div>
+            {% if order.customer_name %}<div>Name: {{ order.customer_name }}</div>{% endif %}
+            {% if order.customer_phone %}<div>Phone: {{ order.customer_phone }}</div>{% endif %}
+            {% if order.order_type == 'DELIVERY' and order.delivery_address %}
+                <div style="margin-top: 3px; word-break: break-word;">Address: {{ order.delivery_address }}</div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 
     <table>
@@ -42,33 +61,38 @@
         </tbody>
     </table>
 
-   <div class="totals">
-    <div style="display:flex; justify-content: space-between;">
-        <span>Total:</span>
-        <span>₹{{ order.sub_total|floatformat:2 }}</span>
+    <div class="totals">
+        <div style="display:flex; justify-content: space-between;">
+            <span>Total:</span>
+            <span>₹{{ order.grand_total|floatformat:2 }}</span>
+        </div>
+
+        {% if order.discount_value > 0 %}
+        <div style="display:flex; justify-content: space-between; font-style: italic;">
+            <span>Discount 
+                {% if order.discount_type == 'PERCENT' %}({{ order.discount_value }}%){% endif %}:
+            </span>
+            <span>-₹{{ order.get_total_discount|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        {% if order.apply_gst %}
+        <div style="display:flex; justify-content: space-between;">
+            <span>GST (5%):</span>
+            <span>₹{{ order.grand_total|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+
+        <div class="grand-total" style="display:flex; justify-content: space-between;">
+            <span>Amount Payable:</span>
+            <span>₹{{ order.grand_total|floatformat:2 }}</span>
+        </div>
     </div>
 
-    {% if order.discount_value > 0 %}
-    <div style="display:flex; justify-content: space-between; font-style: italic;">
-        <span>Discount 
-            {% if order.discount_type == 'PERCENT' %}({{ order.discount_value }}%){% endif %}:
-        </span>
-        <span>-₹{{ order.get_total_discount|floatformat:2 }}</span>
+    <div class="footer center">
+        <p style="margin: 0; font-weight: bold;">THANK YOU FOR YOUR ORDER!</p>
+        <p style="margin: 4px 0 0 0; font-size: 10px; color: #6b7280;">Koshur POS system</p>
     </div>
-    {% endif %}
 
-    {% if order.apply_gst %}
-    <div style="display:flex; justify-content: space-between;">
-        <span>GST (5%):</span>
-        <span>₹{{ order.gst|floatformat:2 }}</span>
-    </div>
-    {% endif %}
-
-    <div class="grand-total" style="display:flex; justify-content: space-between; border-top: 1px solid #000; margin-top: 5px; padding-top: 5px; font-weight: bold; font-size: 18px;">
-        <span>Amount Payable:</span>
-        <span>₹{{ order.grand_total|floatformat:2 }}</span>
-    </div>
-</div>
-</div>
 </body>
 </html>

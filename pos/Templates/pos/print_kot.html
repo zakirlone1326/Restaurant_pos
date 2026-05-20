@@ -1,50 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KOT - Table {{ order.table.table_number }}</title>
+    <title>KOT - Order #{{ order.id }}</title>
     <style>
-        body { width: 80mm; font-family: 'Courier New', monospace; padding: 10px; margin: 0; background: white; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 5px; }
-        .details { margin: 10px 0; font-size: 14px; display: flex; justify-content: space-between; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; border-bottom: 1px solid #000; font-size: 14px; }
-        td { padding: 8px 0; font-size: 18px; font-weight: bold; border-bottom: 1px dotted #ccc; }
-        .footer { margin-top: 20px; text-align: center; font-size: 12px; border-top: 2px solid #000; padding-top: 10px; }
+        body { 
+            width: 80mm; 
+            font-family: 'Courier New', monospace; 
+            padding: 10px; 
+            margin: 0; 
+            background: white; 
+            color: #000; 
+        }
+        .center { text-align: center; }
+        .header { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th { 
+            font-size: 14px; 
+            font-weight: bold; 
+            border-bottom: 2px solid #000; 
+            padding-bottom: 5px; 
+            text-transform: uppercase;
+        }
+        td { padding: 6px 0; font-size: 15px; font-weight: bold; }
+        .divider { border-top: 2px solid #000; margin-top: 10px; padding-top: 5px; }
+        .btn-container { margin-top: 20px; }
+        button { padding: 6px 14px; font-family: inherit; font-weight: bold; cursor: pointer; }
         @media print { .no-print { display: none; } }
     </style>
 </head>
 <body onload="window.print()">
-    <div class="header">
-        <h1 style="margin: 5px 0;">KITCHEN ORDER</h1>
-        <h2 style="margin: 0; font-size: 24px;">TABLE: {{ order.table.table_number }}</h2>
-    </div>
 
-    <div class="details">
-        <span>Order: #{{ order.id }}</span>
-        <span>Date: {{ current_time|date:"d/m/Y H:i" }}</span>
+    <div class="header center">
+        <h1 style="margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 1px;">KOT</h1>
+        
+        <h2 style="margin: 10px 0; font-size: 22px; font-weight: bold;">
+            {% if order.table %}
+                TABLE: {{ order.table.table_number }}
+            {% else %}
+                {{ order.get_order_type_display|upper }}
+            {% endif %}
+        </h2>
+        
+        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-top: 15px; border-top: 1px solid #000; padding-top: 5px;">
+            <span>Order: #{{ order.id }}</span>
+            <span>Date: {{ order.created_at|date:"d/m/Y H:i" }}</span>
+        </div>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th style="width: 50px;">QTY</th>
-                <th>ITEM NAME</th>
+                <th align="left" style="width: 15%;">QTY</th>
+                <th align="left">ITEM NAME</th>
             </tr>
         </thead>
         <tbody>
             {% for item in items %}
             <tr>
-                <td>{{ item.quantity }}</td>
-                <td>{{ item.menu_variant.menu_item.name }}</td>
+                <td valign="top" style="font-size: 18px;">{{ item.quantity }}</td>
+                <td>
+                    {{ item.menu_variant.menu_item.name }}
+                    {% if item.notes %}
+                        <br><span style="font-size: 11px; font-weight: normal; font-style: italic;">* Note: {{ item.notes }}</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <div class="footer">
-        <p style="font-weight: bold; margin: 0;">*** NEW ITEMS ONLY ***</p>
-        <p style="font-size: 10px;">Outlet: {{ order.table.restaurant.name }}</p>
-        <button class="no-print" onclick="window.print()" style="margin-top: 10px; padding: 5px 15px; cursor: pointer;">Print Again</button>
+    <div class="divider center">
+        <p style="margin: 5px 0; font-weight: bold; font-size: 13px;">*** NEW ITEMS ONLY ***</p>
+      
+        
+        <div class="btn-container no-print">
+            <button onclick="window.print()">Print Again</button>
+        </div>
     </div>
+
 </body>
 </html>

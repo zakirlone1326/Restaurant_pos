@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KOSHUR POS | MANAGEMENT </title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -78,8 +79,6 @@
 
         .sidebar-brand span { color: var(--saffron); }
 
-        .sidebar-brand span { color: var(--saffron); }
-
         .sidebar-section {
             padding: 20px 32px 10px 32px;
             font-size: 0.7rem;
@@ -112,7 +111,6 @@
             justify-content: space-between; 
             align-items: center; 
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            /* FIXED LAYOUT CORRECTION CODE INSIDE PREVIOUS CLASS */
             position: fixed;
             top: 0;
             left: 0;
@@ -120,9 +118,8 @@
             z-index: 999;
         }
 
-        /* SCROLLABLE MAIN BODY CONTAINER CORRECTION CODE */
         .main-content-wrapper {
-            padding-top: 100px; /* Pushes content down so it doesn't clip behind fixed header */
+            padding-top: 100px;
             box-sizing: border-box;
         }
 
@@ -166,7 +163,7 @@
         .main-summary h1 { font-size: 4rem; margin: 0; font-weight: 800; color: var(--dark); letter-spacing: -0.05em; }
         .main-summary p { color: var(--slate-500); font-size: 1rem; margin-top: 4px; font-weight: 600; }
 
-        /* --- UPDATED CHART STYLES --- */
+        /* --- CHART STYLES --- */
         .chart-container { 
             display: flex; 
             align-items: flex-end; 
@@ -189,18 +186,14 @@
             position: relative;
             cursor: pointer;
         }
-        
 
-        .bar:hover {
-            background: var(--saffron);
-        }
+        .bar:hover { background: var(--saffron); }
 
-        /* Tooltip Logic */
         .bar::after {
             content: attr(data-label) "\A Total Sales: ₹" attr(data-sales);
-            white-space: pre; /* Allows the line break \A */
+            white-space: pre;
             position: absolute;
-            top: -65px; /* Adjusted for two lines */
+            top: -65px;
             left: 50%;
             transform: translateX(-50%);
             background: white;
@@ -216,9 +209,7 @@
             text-align: left;
         }
 
-        .bar:hover::after {
-            display: block;
-        }
+        .bar:hover::after { display: block; }
 
         .bar:hover::before {
             content: '';
@@ -240,12 +231,8 @@
             text-transform: uppercase; 
         }
 
-        .chart-labels span {
-            flex: 1;
-            text-align: center;
-        }
+        .chart-labels span { flex: 1; text-align: center; }
 
-        /* --- REMAINING STYLES --- */
         .leakage-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
         .leakage-box { background: var(--light-gray); padding: 16px; border-radius: 16px; border: 1px solid var(--slate-200); }
         .leakage-box span { display: block; font-size: 0.65rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase; }
@@ -296,6 +283,9 @@
         <a href="{% url 'attendance_report' %}">🕒 Attendance Report</a>
         <a href="/admin/core/pos/employee/">👥 Staff Directory</a>
         
+        <div class="sidebar-section">REPORTS HUB</div>
+        <a href="/admin/analytics/" style="color: #67e8f9;">📈 Advanced Analytics</a>
+
         <div class="sidebar-section">SYSTEM</div>
         <a href="/admin/core/">⚙️ Admin Panel</a>
         
