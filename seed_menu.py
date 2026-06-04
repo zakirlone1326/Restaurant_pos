@@ -61,7 +61,10 @@ def seed_data():
 
     for cat_name, items in menu_data.items():
         # Create Category
-        category, _ = Category.objects.get_or_create(name=cat_name)
+        category, _ = Category.objects.get_or_create(
+            restaurant=restaurant,
+            name=cat_name
+        )
         print(f"📁 Created Category: {cat_name}")
 
         for item_name, item_price in items:

@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 # ==========================================
-# 🏢 RESTAURANT PROFILE
+# 🏢 RESTAURANT PROFILE (Multi-Tenant Core)
 # ==========================================
 class Restaurant(models.Model):
     name = models.CharField(max_length=255)
@@ -24,7 +24,7 @@ class Table(models.Model):
         ('OCCUPIED', '🔴 Occupied'), 
         ('BILLED', '🟡 Billed')
     ]
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='tables')
     table_number = models.CharField(max_length=10)
     capacity = models.IntegerField(default=4)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='AVAILABLE')
@@ -33,27 +33,32 @@ class Table(models.Model):
         unique_together = ('restaurant', 'table_number')
     
     def __str__(self):
-        return f"Table {self.table_number}"
+        return f"{self.restaurant.name} - Table {self.table_number}"
 
 # ==========================================
 # 📂 MENU ORGANIZATION
 # ==========================================
 class Category(models.Model):
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='menu_categories')
     name = models.CharField(max_length=100)
+    
     class Meta:
-        verbose_name_plural = "Expense Categories" if "Expense" in locals() else "Categories"
+        verbose_name_plural = "Categories"
+        unique_together = ('restaurant', 'name')
+
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.restaurant.name})"
 
 class MenuItem(models.Model):
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='menu_items')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
     name = models.CharField(max_length=200)
+    short_code = models.CharField(max_length=50, blank=True, null=True, help_text="Fast code for billing searches")
     description = models.TextField(blank=True)
     is_available = models.BooleanField(default=True)
     
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.restaurant.name})"
 
 class MenuVariant(models.Model):
     menu_item = models.ForeignKey(MenuItem, related_name='variants', on_delete=models.CASCADE)
@@ -61,10 +66,10 @@ class MenuVariant(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     
     def __str__(self):
-        return f"{self.menu_item.name} ({self.size_name})"
+        return f"{self.menu_item.name} ({self.size_name}) - ₹{self.price}"
 
 # ==========================================
-# 🧾 CORE ORDER & BILLING
+# 🧾 CORE ORDER & BILLING (Kitchen Status Enabled)
 # ==========================================
 class Order(models.Model):
     ORDER_TYPES = [
@@ -76,6 +81,7 @@ class Order(models.Model):
     PAYMENT_MODES = [
         ('CASH', '💵 Cash'),
         ('ONLINE', '📱 Online/UPI'),
+        ('CARD', 'Card'),
     ]
 
     PAYMENT_STATUS = [
@@ -84,10 +90,18 @@ class Order(models.Model):
         ('PAID', '✅ Paid'),
     ]
 
+    PREP_STATUS_CHOICES = [
+        ('IN_PREPARATION', '🍳 In Preparation'),
+        ('WAITING_FOR_PICKUP', '📦 Waiting For Pickup'),
+        ('OUT_FOR_DELIVERY', '🛵 Out For Delivery'),
+        ('COMPLETED', '🏁 Completed'),
+    ]
+
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='orders')
     table = models.ForeignKey(Table, on_delete=models.SET_NULL, related_name='orders', null=True, blank=True)
     order_type = models.CharField(max_length=20, choices=ORDER_TYPES, default='DINE_IN')
+    prep_status = models.CharField(max_length=30, choices=PREP_STATUS_CHOICES, default='IN_PREPARATION')
     
-    # Updated & New Customer Fields for Direct/Delivery Profiles
     customer_name = models.CharField(max_length=100, blank=True, null=True)
     customer_phone = models.CharField(max_length=15, blank=True, null=True)
     delivery_address = models.TextField(blank=True, null=True)
@@ -119,7 +133,7 @@ class Order(models.Model):
             return (subtotal * discount_val_dec) / Decimal('100')
         return discount_val_dec
 
-    def update_totals(self):
+    def update_totals(self, save=True):
         subtotal = sum(item.total_price for item in self.items.filter(is_cancelled=False))
         discount_amount = self.get_total_discount()
         after_discount = max(Decimal('0.00'), subtotal - discount_amount)
@@ -129,30 +143,32 @@ class Order(models.Model):
         else:
             self.grand_total = after_discount.quantize(Decimal('0.01'))
         
-        self.save()
+        if save:
+            self.save(update_fields=['grand_total'])
 
     def save(self, *args, **kwargs):
-        # FIX: Check if table exists before applying layout updates to avoid attribute errors
+        # Auto-set prep status to completed if bill is marked paid or pending
+        if self.payment_status in ['PAID', 'PENDING']:
+            self.prep_status = 'COMPLETED'
+
         if self.table:
-            if self.is_cancelled or self.payment_status == 'PAID':
+            # If the order is cancelled or completed (PAID/PENDING), free the table
+            if self.is_cancelled or self.prep_status == 'COMPLETED':
                 self.table.status = 'AVAILABLE'
-                self.table.save()
-            elif self.payment_status == 'PENDING':
-                self.table.status = 'BILLED' 
-                self.table.save()
+                self.table.save(update_fields=['status'])
+            else:
+                self.table.status = 'OCCUPIED'
+                self.table.save(update_fields=['status'])
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"Order #{self.id} - {self.get_order_type_display()}"
-
 # ==========================================
-# 🍽️ LINE ITEMS
+# 🍽️ LINE ITEMS (KOT Support)
 # ==========================================
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_variant = models.ForeignKey(MenuVariant, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField(default=1)
-    notes = models.TextField(blank=True) 
+    notes = models.TextField(blank=True, help_text="Cooking instructions (e.g., Less spicy)") 
     is_printed_to_kitchen = models.BooleanField(default=False)
     is_cancelled = models.BooleanField(default=False) 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -176,6 +192,7 @@ class Employee(models.Model):
         ('CHEF', 'Chef'),
         ('DELIVERY', 'Delivery Rider')
     ]
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='employees')
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     phone = models.CharField(max_length=15)
@@ -184,7 +201,7 @@ class Employee(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.name} ({self.role})"
+        return f"{self.name} - {self.role} ({self.restaurant.name})"
 
 # ==========================================
 # 🕒 ATTENDANCE
@@ -218,11 +235,14 @@ class SalaryPayment(models.Model):
         is_new = self.pk is None
         super().save(*args, **kwargs)
         if is_new:
-            from .utils import send_staff_notification
-            msg = (f"Hi {self.employee.name}, your salary for {self.month_year} "
-                   f"of ₹{self.amount_paid} has been credited. "
-                   f"Deductions: ₹{self.deductions}. Thank you!")
-            send_staff_notification(self.employee.phone, msg)
+            try:
+                from .utils import send_staff_notification
+                msg = (f"Hi {self.employee.name}, your salary for {self.month_year} "
+                       f"of ₹{self.amount_paid} has been credited. "
+                       f"Deductions: ₹{self.deductions}. Thank you!")
+                send_staff_notification(self.employee.phone, msg)
+            except ImportError:
+                pass
 
     def __str__(self):
         return f"Salary: {self.employee.name} ({self.month_year})"
@@ -232,13 +252,15 @@ class SalaryPayment(models.Model):
 # ==========================================
 class ExpenseCategory(models.Model):
     name = models.CharField(max_length=100)
+    
     class Meta:
         verbose_name_plural = "Expense Categories"
+        
     def __str__(self):
         return self.name
 
 class Expense(models.Model):
-    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE)
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='expenses')
     category = models.ForeignKey(ExpenseCategory, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -246,4 +268,4 @@ class Expense(models.Model):
     description = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.title} (₹{self.amount})"
+        return f"{self.title} (₹{self.amount}) - {self.restaurant.name}"

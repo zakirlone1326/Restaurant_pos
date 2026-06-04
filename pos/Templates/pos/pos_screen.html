@@ -42,14 +42,21 @@
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); 
             gap: 10px; overflow-y: auto; align-content: start;
         }
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
         .food-card { 
             background: #fff; border: 1px solid var(--border-color); padding: 10px;
-            border-radius: 10px; cursor: pointer; text-align: center; 
+            border-radius: 10px; text-align: center; 
             display: flex; flex-direction: column; justify-content: space-between;
             min-height: 90px; transition: 0.1s;
         }
         .food-card h4 { margin: 0 0 5px 0; font-size: 0.85rem; font-weight: 600; color: var(--primary-dark); }
-        .price-tag { color: var(--primary-saffron); font-weight: 700; font-size: 1rem; }
+        
+        .variant-btn {
+            cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; 
+            color: #475569; border-radius: 5px; padding: 5px 8px; font-size: 0.75rem; 
+            font-weight: 600; transition: 0.2s;
+        }
+        .variant-btn:hover { border-color: var(--primary-saffron); background: #fff7ed; }
 
         .order-panel { width: 400px; background: white; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; }
         .items-scroll { flex: 1; overflow-y: auto; padding: 12px; background: #fafafa; }
@@ -90,7 +97,6 @@
         .gst-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800; border: 1px solid var(--border-color); cursor: pointer; }
         .gst-pill.active { background: var(--success); color: white; border-color: var(--success); }
 
-        /* Payment Choice Modal */
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index: 1000; backdrop-filter: blur(2px); }
         .modal-content { background: white; padding: 25px; border-radius: 15px; width: 340px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
         .pay-opt { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 10px; font-weight: 700; cursor: pointer; text-align: left; transition: 0.2s; background: #fff; }
@@ -115,8 +121,32 @@
     </header>
 
     <div class="main-wrapper">
-        <aside class="sidebar-cats" id="cat-nav"></aside>
-        <main class="menu-area" id="food-grid"></main>
+        <aside class="sidebar-cats">
+            {% for cat in categories %}
+                <button class="cat-item {% if forloop.first %}active{% endif %}" onclick="showCategory('cat-{{ cat.id }}', this)">{{ cat.name }}</button>
+            {% endfor %}
+        </aside>
+
+        <main class="menu-area" id="menu-container">
+            {% for cat in categories %}
+                <div id="cat-{{ cat.id }}" class="category-grid" style="display: {% if forloop.first %}grid{% else %}none{% endif %};">
+                    {% for item in cat.items.all %}
+                        {% if item.is_available %}
+                            <div class="food-card">
+                                <h4>{{ item.name }}</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                    {% for variant in item.variants.all %}
+                                        <button class="variant-btn" data-item-id="{{ item.id }}" data-variant-id="{{ variant.id }}">
+                                            {{ variant.size_name }} (₹{{ variant.price }})
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </main>
 
         <aside class="order-panel">
             {% if direct_order and direct_order.order_type == 'DELIVERY' %}
@@ -125,6 +155,11 @@
                 <div style="font-weight: 400; color: #64748b; font-size:0.75rem;">📍 {{ direct_order.delivery_address }}</div>
             </div>
             {% endif %}
+
+            <button onclick="window.location.href='{% url 'table_dashboard' %}'" 
+                    style="margin: 10px; padding: 8px; background: #e2e8f0; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                ← Back to Floor
+            </button>
 
             <div class="items-scroll" id="order-list"></div>
 
@@ -135,7 +170,6 @@
                     </div>
                     <div class="gst-pill" id="gst-toggle" onclick="toggleGST()">GST</div>
                 </div>
-            </div>
                 <div class="compact-row">
                     <div class="action-container">
                         <button class="menu-trigger" onclick="toggleDrop('actionDrop')" style="background: var(--primary-dark); color: white; border:none;">
@@ -150,8 +184,7 @@
                         </div>
                     </div>
                 </div>
-
-                
+            </div>
 
             <div class="total-box">
                 <span style="font-size: 0.75rem; color: #64748b;">GRAND TOTAL</span>
@@ -165,13 +198,11 @@
     <div id="settleModal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top:0">Choose Payment Method</h3>
-            <p style="font-size: 0.8rem; color: #64748b;">
-                {% if table %}Table {{ table.table_number }} will be released after settlement.{% else %}Order will be marked completed.{% endif %}
-            </p>
             <button class="pay-opt" onclick="finishSettlement('CASH')">💵 CASH PAYMENT</button>
             <button class="pay-opt" onclick="finishSettlement('ONLINE')">📱 UPI / QR CODE</button>
-            <button class="pay-opt" onclick="finishSettlement('CARD')">💳 CARD PAYMENT</button> <button onclick="closeModal('settleModal')" style="width:100%; background:none; border:none; color:#94a3b8; font-weight:600; cursor:pointer; margin-top:10px;"></button>
-
+            <button class="pay-opt" onclick="finishSettlement('CARD')">💳 CARD PAYMENT</button>
+            <button class="pay-opt" onclick="finishSettlement('PENDING')">🕒 PENDING </button>
+            
             <button onclick="closeModal('settleModal')" style="width:100%; background:none; border:none; color:#94a3b8; font-weight:600; cursor:pointer; margin-top:10px;">Go Back</button>
         </div>
     </div>
@@ -195,13 +226,35 @@
     <script>
         const tableId = "{{ table.id|default:'' }}";
         const orderId = "{{ direct_order.id|default:'' }}";
-        let isUpdatingType = false;
+        
+        function showCategory(catId, btnElement) {
+            document.querySelectorAll('.category-grid').forEach(g => g.style.display = 'none');
+            document.getElementById(catId).style.display = 'grid';
+            document.querySelectorAll('.cat-item').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+        }
 
         const getCSRF = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
 
-        function getStatusURL() {
-            return tableId ? `/table/${tableId}/status/` : `/table/0/status/?order_id=${orderId}`;
-        }
+        // Updated global event listener for maximum reliability
+        document.addEventListener('click', function(e) {
+            // Check for Menu Variants
+            const variantBtn = e.target.closest('.variant-btn');
+            if (variantBtn) {
+                addFood(variantBtn.dataset.itemId, variantBtn.dataset.variantId);
+                return;
+            }
+
+            // Check for Cart Buttons
+            if (e.target.classList.contains('qty-btn-plus')) {
+                const p = e.target.closest('.bill-row');
+                if (p) addFood(p.dataset.itemId, p.dataset.variantId);
+            }
+            if (e.target.classList.contains('qty-btn-minus')) {
+                const p = e.target.closest('.bill-row');
+                if (p) changeQty(p.dataset.id);
+            }
+        });
 
         function toggleDrop(id) {
             const el = document.getElementById(id);
@@ -216,43 +269,28 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => { initMenu(); syncOrder(); });
-
-        async function initMenu() {
-            const res = await fetch('/menu/');
-            const data = await res.json();
-            const nav = document.getElementById('cat-nav');
-            nav.innerHTML = data.menu.map((cat, idx) => `
-                <button onclick="renderMenu('${cat.category_name}')" class="cat-item" id="cat-${idx}">${cat.category_name}</button>
-            `).join('');
-            if(data.menu.length > 0) renderMenu(data.menu[0].category_name);
-        }
-
-        async function renderMenu(catName) {
-            const res = await fetch('/menu/');
-            const data = await res.json();
-            const grid = document.getElementById('food-grid');
-            const category = data.menu.find(c => c.category_name === catName);
-            grid.innerHTML = category.items.map(item => `
-                <div onclick="addFood(${item.id})" class="food-card">
-                    <h4>${item.name}</h4>
-                    <div class="price-tag">₹${item.price}</div>
-                </div>
-            `).join('');
-            document.querySelectorAll('.cat-item').forEach(btn => btn.classList.toggle('active', btn.innerText.trim() === catName));
-        }
-
-        async function addFood(itemId) {
+        document.addEventListener('DOMContentLoaded', syncOrder);
+        
+        async function addFood(itemId, variantId) {
             const fd = new FormData();
             if (tableId) fd.append('table_id', tableId);
             if (orderId) fd.append('order_id', orderId);
             fd.append('menu_item_id', itemId);
-            const response = await fetch('/add-item/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
-            if(response.ok) syncOrder();
+            fd.append('variant_id', variantId);
+            
+            try {
+                const response = await fetch('/add-item/', { 
+                    method: 'POST', 
+                    headers: {'X-CSRFToken': getCSRF()}, 
+                    body: fd 
+                });
+                if (response.ok) syncOrder();
+            } catch (error) { console.error("Error adding food:", error); }
         }
 
         async function syncOrder() {
-            const res = await fetch(getStatusURL());
+            const url = tableId ? `/table/${tableId}/status/` : `/table/0/status/?order_id=${orderId}`;
+            const res = await fetch(url);
             const data = await res.json();
             const list = document.getElementById('order-list');
             const tag = document.getElementById('payment-status-tag');
@@ -260,29 +298,27 @@
             if(!data.active || !data.items || data.items.length === 0) {
                 list.innerHTML = '<div style="text-align:center; color:#94a3b8; margin-top:50px;">Empty Cart</div>';
                 document.getElementById('total-val').innerText = '₹0.00';
-                tag.style.background = "none"; tag.style.color = "#94a3b8"; tag.innerText = "KOSHUR POS";
                 return;
             }
 
             tag.innerText = data.payment_status === 'PENDING' ? "PAYMENT PENDING" : "KOSHUR POS";
             tag.style.background = data.payment_status === 'PENDING' ? "var(--pending)" : "none";
-            tag.style.color = data.payment_status === 'PENDING' ? "white" : "#94a3b8";
 
             list.innerHTML = data.items.map(i => `
-                <div class="bill-row">
-                    <div class="item-name-row"><span>${i.name}</span><span>₹${i.price}</span></div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <button onclick="changeQty(${i.id})" style="width:24px; height:24px; cursor:pointer;">-</button>
-                        <span>${i.qty}</span>
-                        <button onclick="addFood(${i.menu_item_id})" style="width:24px; height:24px; cursor:pointer;">+</button>
-                    </div>
+            <div class="bill-row" data-id="${i.id}" data-item-id="${i.menu_item_id}" data-variant-id="${i.variant_id}">
+                <div class="item-name-row">
+                    <span>${i.name} <small style="color: #64748b; font-weight: 400; font-size: 0.75rem;">(${i.variant_name || 'Standard'})</small></span>
+                    <span>₹${i.price}</span>
                 </div>
-            `).join('');
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button class="qty-btn-minus" style="width:28px; height:28px; cursor:pointer; background:#fff; border:1px solid #cbd5e1; border-radius:4px;">-</button>
+                    <span style="font-weight:600; min-width:20px; text-align:center;">${i.qty}</span>
+                    <button class="qty-btn-plus" style="width:28px; height:28px; cursor:pointer; background:var(--primary-saffron); color:white; border:none; border-radius:4px; font-weight:bold;">+</button>
+                </div>
+            </div>`).join('');
 
             document.getElementById('total-val').innerText = `₹${parseFloat(data.grand_total).toFixed(2)}`;
             document.getElementById('gst-toggle').classList.toggle('active', data.apply_gst);
-            
-            // Clean dynamic text presentation update without breaking structure positions
             document.getElementById('current-type-label').innerText = (data.order_type || 'DINE_IN').replace('_', ' ');
         }
 
@@ -299,28 +335,21 @@
             syncOrder();
         }
 
-        function openSettleModal() {
-            document.getElementById('settleModal').style.display = 'flex';
-        }
-
+        function openSettleModal() { document.getElementById('settleModal').style.display = 'flex'; }
+        
         async function finishSettlement(mode) {
             const fd = new FormData();
-            fd.append('payment_mode', mode);
-            fd.append('payment_status', 'PAID'); 
-            
+            if (mode !== 'PENDING') fd.append('payment_mode', mode);
+            fd.append('payment_status', mode === 'PENDING' ? 'PENDING' : 'PAID');
             const targetUrl = tableId ? `/table/${tableId}/settle/` : `/table/0/settle/?order_id=${orderId}`;
             const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
-            if(res.ok) {
-                window.location.href = '/table/';
-            }
+            if(res.ok) window.location.href = "{% url 'table_dashboard' %}";
         }
 
         async function applyDiscount() {
             const fd = new FormData();
             fd.append('discount_value', document.getElementById('discount-val').value);
             fd.append('discount_type', document.getElementById('discount-type').value);
-            fd.append('discount_note', document.getElementById('discount-note').value);
-            
             const targetUrl = tableId ? `/table/${tableId}/apply-discount/` : `/table/0/apply-discount/?order_id=${orderId}`;
             const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) { closeModal('discountModal'); syncOrder(); }
@@ -331,7 +360,6 @@
             if(!reason) return;
             const fd = new FormData();
             fd.append('cancel_reason', reason);
-            
             const targetUrl = tableId ? `/table/${tableId}/cancel-order/` : `/table/0/cancel-order/?order_id=${orderId}`;
             const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) window.location.href = '/table/';
@@ -339,17 +367,8 @@
 
         function openDiscountModal() { document.getElementById('discountModal').style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        
-        function printKOT() { 
-            const timestamp = new Date().getTime();
-            const targetUrl = tableId ? `/table/${tableId}/print-kot/?t=${timestamp}` : `/table/0/print-kot/?order_id=${orderId}&t=${timestamp}`;
-            window.open(targetUrl); 
-        }
-        function printBill() { 
-            const timestamp = new Date().getTime();
-            const targetUrl = tableId ? `/table/${tableId}/print-invoice/?t=${timestamp}` : `/table/0/print-invoice/?order_id=${orderId}&t=${timestamp}`;
-            window.open(targetUrl, '_blank'); 
-        }
+        function printKOT() { const targetUrl = tableId ? `/table/${tableId}/print-kot/` : `/table/0/print-kot/?order_id=${orderId}`; window.open(targetUrl); }
+        function printBill() { const targetUrl = tableId ? `/table/${tableId}/print-invoice/` : `/table/0/print-invoice/?order_id=${orderId}`; window.open(targetUrl, '_blank'); }
     </script>
 </body>
 </html>

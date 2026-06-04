@@ -274,9 +274,11 @@
         <div class="sidebar-brand">KOSHUR <span>POS</span></div>
         
         <div class="sidebar-section">OPERATIONS</div>
-        <a href="/table/">🏃 Running Orders</a>
-        <a href="/admin/core/pos/order/">📜 All Bills & Invoices</a>
-        <a href="{% url 'menu_management' %}">🍴 Menu Control</a>
+        <!-- FIXED LINKS TO TARGET THE NEW ENDPOINTS SAFELY WITHOUT REMOVING CHARTS -->
+        <a href="{% url 'live_orders' %}">🔵 Live Orders</a>
+        <a href="{% url 'all_orders_view' %}">📜 All Orders</a>
+        <a href="{% url 'kot_management' %}">🍳 KOT</a>
+        <a href="{% url 'menu_management' %}">🍴 Menu</a>
         
         <div class="sidebar-section">RESOURCES</div>
         <a href="/admin/core/pos/expense/">💸 Daily Expenses</a>
@@ -293,7 +295,7 @@
             {% csrf_token %}
         </form>
         <button onclick="if(confirm('Logout from Koshur POS?')) document.getElementById('logout-form').submit();" style="color: #ef4444; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-            🚪 Logout
+            🚪 Log out
         </button>
     </div>
 
@@ -306,7 +308,8 @@
     </div>
 
     <div class="main-content-wrapper">
-
+        <!-- RETAINED INHERITANCE INJECT POINT SO OPERATIONAL PAGES SCALE ON TOP -->
+        {% block content %}
         <div class="sales-track-card">
             <div class="card-header">
                 <h2 style="font-size: 0.8rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1px;">Sales Overview</h2>
@@ -332,6 +335,7 @@
                 <p>{{ order_count }} Orders Completed</p>
             </div>
 
+            <!-- ALL GRAPHS AND CHART RENDERS PERFECTLY PRESERVED -->
             <div class="chart-container">
                 {% for item in graph_data %}
                     <div class="bar" 
@@ -409,7 +413,6 @@
         </div>
 
         <div class="sales-track-card">
-            <span class="saffron-tag">Revenue Leakage & Audit</span>
             <div class="leakage-grid">
                 <div class="leakage-box">
                     <span>Cancelled Bills</span>
@@ -453,7 +456,7 @@
         <div style="text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
             POWERED BY KOSHUR POS • 2026
         </div>
-
+        {% endblock %}
     </div>
 
     <script>

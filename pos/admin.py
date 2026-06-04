@@ -7,14 +7,26 @@ from .models import (
     Employee, Attendance, SalaryPayment
 )
 
-# --- INLINES ---
+# ==========================================
+# 🧱 INLINES FOR UNIFIED DATA INJECTIONS
+# ==========================================
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
     fields = ('menu_variant', 'quantity', 'is_cancelled', 'total_price')
     readonly_fields = ('total_price',)
 
-# --- TABLE MANAGEMENT ---
+
+class MenuVariantInline(admin.TabularInline):
+    """Brings single-screen variant pricing fields directly onto the MenuItem add form"""
+    model = MenuVariant
+    extra = 1  # Automatically provides 1 empty placeholder row for rapid entries
+    fields = ('size_name', 'price')
+
+
+# ==========================================
+# 🏢 SYSTEM LAYOUTS & REVENUE LOGGERS
+# ==========================================
 @admin.register(Table)
 class TableAdmin(admin.ModelAdmin):
     list_display = ('table_number', 'restaurant', 'colored_status', 'capacity')
@@ -29,7 +41,6 @@ class TableAdmin(admin.ModelAdmin):
         }
         color = colors.get(obj.status, '#64748b')
         status_text = obj.get_status_display()
-        # Using explicit arguments to prevent "args/kwargs" errors
         return format_html(
             '<b style="color: white; background: {}; padding: 5px 10px; border-radius: 5px;">{}</b>',
             color,
@@ -37,7 +48,7 @@ class TableAdmin(admin.ModelAdmin):
         )
     colored_status.short_description = 'Status'
 
-# --- CORE ORDER & BILLING ---
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'table', 'grand_total_display', 'payment_status_badge', 'order_status_badge', 'created_at')
@@ -78,12 +89,41 @@ class OrderAdmin(admin.ModelAdmin):
         return "Active"
     order_status_badge.short_description = 'Status'
 
-# --- STAFF & ATTENDANCE ---
+
+# ==========================================
+# 🍴 CATALOG ENGINE & MENU CONTROL INLINES
+# ==========================================
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+
+
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    """Unified master catalog card handling basic parameters alongside live prices inline"""
+    list_display = ('name', 'category', 'is_available')
+    list_filter = ('category', 'is_available')
+    search_fields = ('name', 'short_code')
+    inlines = [MenuVariantInline]  # Links dynamic price size matrices straight to the item panel
+
+
+@admin.register(MenuVariant)
+class MenuVariantAdmin(admin.ModelAdmin):
+    list_display = ('menu_item', 'size_name', 'price')
+    list_filter = ('size_name', 'menu_item__category')
+    search_fields = ('menu_item__name', 'size_name')
+
+
+# ==========================================
+# 👥 RESOURCE MANAGEMENT & LEAVE SHEET PLUGS
+# ==========================================
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
     list_display = ('name', 'role', 'phone', 'base_salary', 'is_active')
     list_filter = ('role', 'is_active')
     search_fields = ('name', 'phone')
+
 
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
@@ -96,25 +136,34 @@ class AttendanceAdmin(admin.ModelAdmin):
         return mark_safe('<b style="color: #f44336;">Absent</b>')
     attendance_status.short_description = 'Presence'
 
+
 @admin.register(SalaryPayment)
 class SalaryPaymentAdmin(admin.ModelAdmin):
     list_display = ('employee', 'month_year', 'amount_paid', 'payment_date')
     list_filter = ('month_year', 'employee')
     search_fields = ('employee__name',)
 
-# --- EXPENSES ---
+
+# ==========================================
+# 💸 INTERNAL BOOKKEEPING LEDGERS
+# ==========================================
+@admin.register(ExpenseCategory)
+class ExpenseCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    search_fields = ('name',)
+
+
 @admin.register(Expense)
 class ExpenseAdmin(admin.ModelAdmin):
     list_display = ('title', 'category', 'amount', 'date')
     list_filter = ('date', 'category')
     search_fields = ('title',)
 
-# --- REGISTRATIONS ---
+
+# ==========================================
+# ⚙️ GLOBAL HOOK SITE SHELL LAYOUT CONFIGS
+# ==========================================
 admin.site.register(Restaurant)
-admin.site.register(Category)
-admin.site.register(MenuItem)
-admin.site.register(MenuVariant)
-admin.site.register(ExpenseCategory)
 admin.site.register(OrderItem)
 
 admin.site.site_header = "Koshur POS | Control Center"

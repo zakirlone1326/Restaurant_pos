@@ -1,0 +1,54 @@
+{% extends "admin/admin_dashboard.html" %}
+{% block content %}
+<div style="display: flex; gap: 24px; max-width: 1200px; margin: auto;">
+
+    <!-- Left Main Container: Running Orders Summary Block -->
+    <div style="flex: 1; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid var(--slate-200);">
+        <h3 style="margin-top: 0; color: var(--saffron);">🔵 Running Orders</h3>
+        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
+                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Order</span>
+                <h1 style="margin: 8px 0 0 0; font-size: 2rem;">{{ running_orders_count }}</h1>
+            </div>
+            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
+                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Amount</span>
+                <h1 style="margin: 8px 0 0 0; font-size: 2rem; color: var(--dark);">₹{{ running_orders_amount }}</h1>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
+            <span>🍽️ Dine in</span><strong>₹{{ dine_in_amount }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
+            <span>🛍️ Pick up</span><strong>₹{{ pickup_amount }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 16px;">
+            <span>🛵 Delivery</span><strong>₹{{ delivery_amount }}</strong>
+        </div>
+    </div>
+
+    <!-- Right Main Container: Pending Kitchen Pipelines Summary Block -->
+    <div style="flex: 1; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid var(--slate-200);">
+        <h3 style="margin-top: 0; color: #3b82f6;">🔵 Pending Orders</h3>
+        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
+                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Orders</span>
+                <h1 style="margin: 8px 0 0 0; font-size: 2rem;">{{ pending_orders_count }}</h1>
+            </div>
+            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
+                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Amount</span>
+                <h1 style="margin: 8px 0 0 0; font-size: 2rem;">₹{{ pending_orders_amount }}</h1>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
+            <span>🍳 In Preparation</span><strong>₹{{ in_prep_amount }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
+            <span>📦 Waiting For Pickup</span><strong>₹{{ waiting_pickup_amount }}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 16px;">
+            <span>🛵 Out For Delivery</span><strong>₹{{ out_delivery_amount }}</strong>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

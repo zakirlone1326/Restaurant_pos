@@ -6,21 +6,46 @@
     <title>Menu Control | KOSHUR POS</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --saffron: #f97316; --dark: #0f172a; --light: #f8fafc; --danger: #ef4444; }
+        :root { 
+            --saffron: #f97316; 
+            --dark: #0f172a; 
+            --light: #f8fafc; 
+            --danger: #ef4444; 
+            --emerald: #10b981;
+            --sky: #38bdf8;
+            --slate-200: #e2e8f0;
+            --slate-500: #64748b;
+        }
         body { font-family: 'Inter', sans-serif; background: var(--light); color: var(--dark); margin: 0; padding-bottom: 100px; }
         
+        /* --- HEADER NAVBAR --- */
         .header { background: var(--dark); color: white; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        
-        .controls-bar { max-width: 600px; margin: 20px auto; padding: 0 15px; display: flex; gap: 10px; }
-        .search-bar { flex: 1; padding: 14px 20px; border-radius: 14px; border: 1px solid #e2e8f0; font-size: 1rem; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .bulk-btn { background: var(--saffron); color: white; border: none; padding: 0 20px; border-radius: 14px; font-weight: 800; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; }
+        .menu-crumbs { font-size: 0.85rem; color: #cbd5e1; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+        .menu-crumbs a { color: var(--saffron); text-decoration: none; }
 
+        /* --- STAGE CONTROLS & SUB-TABS (Petpooja Style) --- */
+        .controls-bar { max-width: 600px; margin: 20px auto 10px auto; padding: 0 15px; display: flex; gap: 10px; }
+        .search-bar { flex: 1; padding: 14px 20px; border-radius: 14px; border: 1px solid #e2e8f0; font-size: 1rem; outline: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .bulk-btn { background: var(--saffron); color: white; border: none; padding: 0 20px; border-radius: 14px; font-weight: 800; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; height: 48px; display: flex; align-items: center; justify-content: center; }
+
+        .sub-tab-nav { max-width: 600px; margin: 0 auto 20px auto; padding: 0 15px; display: flex; gap: 5px; border-bottom: 2px solid var(--slate-200); }
+        .sub-tab-link { padding: 10px 16px; text-decoration: none; color: var(--slate-500); font-weight: 700; font-size: 0.85rem; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .sub-tab-link:hover { color: var(--saffron); }
+        .sub-tab-link.active { color: var(--saffron); border-bottom-color: var(--saffron); }
+
+        /* --- PORTAL MATRIX BLOCKS --- */
+        .portal-wrapper { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 20px; }
+        .portal-card { background: white; border-radius: 16px; padding: 24px; border: 1px solid var(--slate-200); display: flex; align-items: center; gap: 16px; text-decoration: none; color: inherit; transition: transform 0.2s; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.02); }
+        .portal-card:hover { transform: translateY(-3px); border-color: var(--saffron); }
+        .portal-icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; }
+        .list-group { display: flex; flex-direction: column; gap: 12px; max-width: 500px; margin: 0 auto; }
+
+        /* --- STAGE 4: DATA LOG CARD ELEMENTS --- */
         .category-section { max-width: 600px; margin: 24px auto; padding: 0 15px; }
         .category-title { font-size: 0.8rem; font-weight: 800; color: var(--saffron); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; border-bottom: 2px solid #fed7aa; display: inline-block; padding-bottom: 4px; }
-
-        .item-card { background: white; border-radius: 20px; padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); border: 1px solid transparent; }
+        .item-card { background: white; border-radius: 20px; padding: 18px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
         .item-card.inactive { opacity: 0.6; background: #f1f5f9; }
-        
         .item-info { flex: 1; }
         .item-info h4 { margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--dark); }
         
@@ -39,51 +64,218 @@
         input:checked + .slider { background-color: var(--saffron); }
         input:checked + .slider:before { transform: translateX(20px); }
         
-        .save-banner { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 16px 32px; border-radius: 50px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; font-size: 0.9rem; letter-spacing: 0.5px; }
+        .save-banner { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--dark); color: white; padding: 16px 32px; border-radius: 50px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: none; z-index: 1000; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin:0; font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px;">MENU CONTROL</h2>
-    <a href="/admin/" style="color:white; text-decoration:none; font-size:0.85rem; font-weight:700; border: 1.5px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 10px;">DASHBOARD</a>
+    <div class="menu-crumbs">
+        📁 &nbsp;<a href="{% url 'menu_management' %}">Menu</a>
+        {% if stage == '2' %} &nbsp;➔&nbsp; <span>Menu Management</span>
+        {% elif stage == '3' %} &nbsp;➔&nbsp; <a href="{% url 'menu_management' %}?stage=2">Menu Management</a> &nbsp;➔&nbsp; <span>All In One Menu</span>
+        {% elif stage == '4' %} &nbsp;➔&nbsp; <a href="{% url 'menu_management' %}?stage=2">Menu Management</a> &nbsp;➔&nbsp; <a href="{% url 'menu_management' %}?stage=3">All In One Menu</a> &nbsp;➔&nbsp; <span>Items Control Sheet</span>
+        {% endif %}
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+        {% if stage and stage != '1' %}
+            <a href="{% url 'menu_management' %}?stage={{ stage|add:'-1' }}" style="color:white; text-decoration:none; font-size:0.8rem; font-weight:700; background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 10px;">⬅️ BACK</a>
+        {% endif %}
+        <a href="/admin/" style="color:white; text-decoration:none; font-size:0.85rem; font-weight:700; border: 1.5px solid rgba(255,255,255,0.3); padding: 6px 12px; border-radius: 10px;">DASHBOARD</a>
+    </div>
 </div>
 
-<div class="controls-bar">
-    <input type="text" id="searchInput" class="search-bar" placeholder="Find a dish..." onkeyup="filterItems()">
-    <button class="bulk-btn" id="bulkModeBtn" onclick="toggleBulkEdit()">Edit Prices</button>
-</div>
-
-{% for category in categories %}
-<div class="category-section" id="cat-{{ category.id }}">
-    <div class="category-title">{{ category.name }}</div>
-    {% for item in category.menuitem_set.all %}
-    <div class="item-card {% if not item.is_available %}inactive{% endif %}" id="item-row-{{ item.id }}">
-        <div class="item-info">
-            <h4>{{ item.name }}</h4>
-            <div class="price-container">
-                <span>₹</span>
-                <input type="number" class="price-input" 
-                    value="{{ item.variants.first.price|floatformat:0 }}" 
-                    readonly 
-                    onchange="updatePrice('{{ item.id }}', this.value)">
+<!-- ==========================================
+     STAGE 1 LAYOUT: SIDEBAR DIRECTORY
+     ========================================== -->
+{% if stage == '1' or not stage %}
+<div class="portal-wrapper">
+    <h2 style="font-weight: 800; font-size: 1.3rem; text-align: center; margin-bottom: 25px; letter-spacing: -0.5px;">Menu Control Directory</h2>
+    <div class="list-group">
+        <a href="{% url 'menu_management' %}?stage=2" class="portal-card">
+            <div class="portal-icon" style="background: #fff7ed; color: var(--saffron);">%</div>
+            <div>
+                <strong style="display:block; font-size:1rem;">Menu & Discounts</strong>
+                <small style="color:var(--slate-500);">Central multi-outlet pricing hubs and options</small>
+            </div>
+        </a>
+        <div class="portal-card" style="opacity: 0.6; cursor: not-allowed;">
+            <div class="portal-icon" style="background: #eff6ff; color: #3b82f6;">📤</div>
+            <div>
+                <strong style="display:block; font-size:1rem;">Multi-Item Images Upload</strong>
+                <small style="color:var(--slate-500);">Batch drop graphical assets onto catalog items</small>
             </div>
         </div>
-        
-        <div class="actions">
-            <button class="del-btn" title="Delete Item" onclick="deleteItem('{{ item.id }}', '{{ item.name }}')">🗑️</button>
-            <label class="switch">
-                <input type="checkbox" {% if item.is_available %}checked{% endif %} onchange="toggleStatus('{{ item.id }}')">
-                <span class="slider"></span>
-            </label>
+        <a href="{% url 'menu_management' %}?stage=4" class="portal-card">
+            <div class="portal-icon" style="background: #f0fdf4; color: var(--emerald);">🎛️</div>
+            <div>
+                <strong style="display:block; font-size:1rem;">Menu on/off</strong>
+                <small style="color:var(--slate-500);">Instantly toggle stock availability limits</small>
+            </div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==========================================
+     STAGE 2 LAYOUT: ALL IN ONE CONTROL HUB
+     ========================================== -->
+{% if stage == '2' %}
+<div class="portal-wrapper">
+    <div class="portal-grid">
+        <a href="{% url 'menu_management' %}?stage=3" class="portal-card" style="flex-direction: column; align-items: flex-start; padding: 30px;">
+            <div class="portal-icon" style="background: #e0f2fe; color: #0284c7; width: 60px; height: 60px; font-size: 1.6rem;">📋</div>
+            <h3 style="margin: 16px 0 6px 0; font-size: 1.15rem; font-weight: 800;">All In One Menu</h3>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--slate-500); line-height: 1.4;">Manage Menu & its related configuration from below.</p>
+            <span style="margin-top: 20px; color: #0284c7; font-weight: 700; font-size: 0.85rem; border: 1.5px solid #0284c7; padding: 6px 16px; border-radius: 8px;">Manage Menu</span>
+        </a>
+        <div class="portal-card" style="flex-direction: column; align-items: flex-start; padding: 30px; opacity: 0.5; cursor: not-allowed;">
+            <div class="portal-icon" style="background: #f1f5f9; color: var(--slate-500); width: 60px; height: 60px; font-size: 1.6rem;">🏪</div>
+            <h3 style="margin: 16px 0 6px 0; font-size: 1.15rem; font-weight: 800;">Add Virtual Outlet</h3>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--slate-500); line-height: 1.4;">Create a new virtual outlet to control menus independently.</p>
         </div>
     </div>
-    {% endfor %}
 </div>
-{% endfor %}
+{% endif %}
+
+<!-- ==========================================
+     STAGE 3 LAYOUT: CHANNELS SPLIT DISTRIBUTION
+     ========================================== -->
+{% if stage == '3' %}
+<div class="portal-wrapper">
+    <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.5px;">All In One Menu Channels</h3>
+    <div class="portal-grid">
+        <a href="{% url 'menu_management' %}?stage=4&tab=items" class="portal-card">
+            <div class="portal-icon" style="background: #fff7ed; color: var(--saffron);">📖</div>
+            <div><strong>Base Menu</strong><p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--slate-500);">Master structural item parameters</p></div>
+        </a>
+        <a href="{% url 'menu_management' %}?stage=4&tab=items" class="portal-card">
+            <div class="portal-icon" style="background: #fdf2f2; color: #ef4444;">🍽️</div>
+            <div><strong>Dine In</strong><p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--slate-500);">Floor configuration view filters</p></div>
+        </a>
+        <a href="{% url 'menu_management' %}?stage=4&tab=items" class="portal-card">
+            <div class="portal-icon" style="background: #f0fdf4; color: #22c55e;">🛵</div>
+            <div><strong>Home Delivery</strong><p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--slate-500);">Logistical handling configurations</p></div>
+        </a>
+        <a href="{% url 'menu_management' %}?stage=4&tab=items" class="portal-card">
+            <div class="portal-icon" style="background: #fffbeb; color: #f59e0b;">📦</div>
+            <div><strong>Parcel</strong><p style="margin:4px 0 0 0; font-size:0.75rem; color:var(--slate-500);">Counter pickup catalog profiles</p></div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ==========================================
+     STAGE 4 LAYOUT: MASTER CONTROLS WITH SUB-TAB INTERFACES
+     ========================================== -->
+{% if stage == '4' %}
+
+    <!-- Sub-tab Navigation Grid -->
+    <div class="sub-tab-nav">
+        <a href="{% url 'menu_management' %}?stage=4&tab=items" class="sub-tab-link {% if tab == 'items' or not tab %}active{% endif %}">Items</a>
+        <a href="{% url 'menu_management' %}?stage=4&tab=categories" class="sub-tab-link {% if tab == 'categories' %}active{% endif %}">Categories</a>
+        <a href="{% url 'menu_management' %}?stage=4&tab=variants" class="sub-tab-link {% if tab == 'variants' %}active{% endif %}">Variants</a>
+        <a href="{% url 'menu_management' %}?stage=4&tab=addons" class="sub-tab-link {% if tab == 'addons' %}active{% endif %}">Addons</a>
+    </div>
+
+    <!-- TAB SUB-FLOW A: ITEMS PANEL -->
+    {% if tab == 'items' or not tab %}
+    <div class="controls-bar" style="max-width: 600px; display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="searchInput" class="search-bar" placeholder="Find a dish..." onkeyup="filterItems()">
+        <button class="bulk-btn" id="bulkModeBtn" onclick="toggleBulkEdit()">Edit Prices</button>
+        <a href="/admin/core/pos/menuitem/add/" target="_blank" class="bulk-btn" style="background: #2563eb; text-decoration: none; padding: 0 16px; white-space: nowrap;">
+            + Add Item
+        </a>
+    </div>
+
+    {% for category in categories %}
+    <div class="category-section" id="cat-{{ category.id }}">
+        <div class="category-title">{{ category.name }}</div>
+        {% for item in category.items.all %}
+        <div class="item-card {% if not item.is_available %}inactive{% endif %}" id="item-row-{{ item.id }}">
+            <div class="item-info">
+                <h4>{{ item.name }}</h4>
+                <div class="price-container">
+                    <span>₹</span>
+                    <input type="number" class="price-input" 
+                        value="{{ item.variants.first.price|floatformat:0 }}" 
+                        readonly 
+                        onchange="updatePrice('{{ item.id }}', this.value)">
+                </div>
+            </div>
+            <div class="actions">
+                <button class="del-btn" title="Delete Item" onclick="deleteItem('{{ item.id }}', '{{ item.name }}')">🗑️</button>
+                <label class="switch">
+                    <input type="checkbox" {% if item.is_available %}checked{% endif %} onchange="toggleStatus('{{ item.id }}')">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- TAB SUB-FLOW B: CATEGORIES MANAGEMENT PANEL -->
+    {% if tab == 'categories' %}
+    <div class="category-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span class="category-title" style="margin-bottom: 0;">Active Categories</span>
+            <a href="/admin/core/pos/category/add/" target="_blank" class="bulk-btn" style="padding: 10px 15px; font-size: 0.75rem; text-decoration: none;">
+                + Add Category
+            </a>
+        </div>
+        {% for category in categories %}
+        <div class="item-card" style="padding: 20px;">
+            <div class="item-info">
+                <h4 style="font-size:1.1rem;">📁 {{ category.name }}</h4>
+                <small style="color:var(--slate-500); font-weight:600;">Total Dishes: {{ category.items.count }}</small>
+            </div>
+            <div class="actions">
+                <span style="font-size:0.75rem; font-weight:800; background:#d1fae5; color:#065f46; padding:4px 10px; border-radius:20px;">Active</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- TAB SUB-FLOW C: VARIANTS MANAGEMENT GRID -->
+    {% if tab == 'variants' %}
+    <div class="category-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span class="category-title" style="margin-bottom: 0;">Size Variations Matrix</span>
+            <a href="/admin/core/pos/menuvariant/add/" target="_blank" class="bulk-btn" style="padding: 10px 15px; font-size: 0.75rem; text-decoration: none;">
+                + Add Size
+            </a>
+        </div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Full</h4><small style="color:var(--slate-500);">Portion Size Base</small></div><span style="font-weight:700; color:var(--emerald);">Active Choice</span></div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Half</h4><small style="color:var(--slate-500);">Portion Size Base</small></div><span style="font-weight:700; color:var(--emerald);">Active Choice</span></div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Large</h4><small style="color:var(--slate-500);">Pizza Dimension Scaling</small></div><span style="font-weight:700; color:var(--emerald);">Active Choice</span></div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Regular</h4><small style="color:var(--slate-500);">Pizza Dimension Scaling</small></div><span style="font-weight:700; color:var(--emerald);">Active Choice</span></div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>180mL / 300mL</h4><small style="color:var(--slate-500);">Beverage Fluid Lines</small></div><span style="font-weight:700; color:var(--emerald);">Active Choice</span></div>
+    </div>
+    {% endif %}
+
+    <!-- TAB SUB-FLOW D: ADDONS MANAGEMENT PANEL -->
+    {% if tab == 'addons' %}
+    <div class="category-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <span class="category-title" style="margin-bottom: 0;">Modifier Addon Groups</span>
+            <a href="/admin/core/pos/menuitem/add/" target="_blank" class="bulk-btn" style="padding: 10px 15px; font-size: 0.75rem; text-decoration: none;">
+                + Add Addon
+            </a>
+        </div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Add On Pizza</h4><small style="color:var(--slate-500);">Mozzarella crust modifications</small></div><span style="color:var(--saffron); font-weight:700;">₹ Extra Layer</span></div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Extra Dressing</h4><small style="color:var(--slate-500);">Sauce lines customization drops</small></div><span style="color:var(--saffron); font-weight:700;">₹ Extra Layer</span></div>
+        <div class="item-card" style="padding: 16px;"><div class="item-info"><h4>Fried Onions</h4><small style="color:var(--slate-500);">Biryani topping custom choice</small></div><span style="color:var(--saffron); font-weight:700;">₹ Extra Layer</span></div>
+    </div>
+    {% endif %}
+
+{% endif %}
 
 <div id="saveBanner" class="save-banner">UPDATING MENU...</div>
 
+<!-- JavaScript Async Controllers -->
 <script>
 let isBulkMode = false;
 
@@ -147,7 +339,7 @@ function deleteItem(itemId, itemName) {
             headers: { 'X-CSRFToken': '{{ csrf_token }}' },
             body: formData
         })
-        .then(response => response.json()) // Force response to JSON
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const row = document.getElementById(`item-row-${itemId}`);
@@ -157,7 +349,6 @@ function deleteItem(itemId, itemName) {
                     hideBanner();
                 }, 300);
             } else {
-                // This will now show you the ACTUAL error from Django
                 alert("Could not delete: " + data.error);
                 hideBanner();
             }

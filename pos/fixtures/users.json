@@ -1,0 +1,29 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+      "username": "9149562695",
+      "email": "lonezakir1326@gmail.com",
+      "password": "pbkdf2_sha256$870000$mockSaltStringForLocalDevOnly$iZkWmCHlS8fEaIqYpTjGzBqV9wXmK4rL7bN1vP3cDhA=",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "date_joined": "2026-06-01T00:00:00Z"
+    }
+  },
+
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "username": "6005278272",
+      "email": "urfanwani9@gmail.com",
+      "password": "pbkdf2_sha256$870000$pE6XmK8WbV1Z$uGqYpTjGzBqV9wXmK4rL7bN1vP3cDhA8mS8fEaIqYpA=",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": false,
+      "date_joined": "2026-06-01T00:00:00Z"
+    }
+  }
+]

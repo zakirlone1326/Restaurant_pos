@@ -1,0 +1,67 @@
+{% extends "admin/admin_dashboard.html" %}
+{% block content %}
+<div style="max-width: 1200px; margin: auto; padding: 20px;">
+    
+    <!-- Title Area -->
+    <div style="margin-bottom: 24px;">
+        <h2 style="margin: 0; color: var(--dark);">🍳 Live Kitchen Tickets (KOT)</h2>
+        <p style="margin: 4px 0 0 0; color: var(--slate-500); font-size: 0.85rem;">Active orders currently being prepared or waiting to be served</p>
+    </div>
+
+    <!-- Active KOT Cards Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+        {% for kot in kots %}
+        <div style="background: white; border-radius: 16px; border-top: 6px solid var(--saffron); padding: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+            
+            <!-- Top Card Stats -->
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed var(--slate-200); padding-bottom: 12px; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem; color: var(--dark);">Order #{{ kot.id }}</h3>
+                        <span style="font-size: 0.75rem; color: var(--slate-500);">⏱️ {{ kot.created_at|date:"h:i A" }}</span>
+                    </div>
+                    <span style="background: var(--light-gray); padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; color: var(--dark);">
+                        {% if kot.order_type == 'DINE_IN' %}🍽️ Table {{ kot.table.table_number }}{% elif kot.order_type == 'PICK_UP' %}🛍️ Pickup{% else %}🛵 Delivery{% endif %}
+                    </span>
+                </div>
+
+                <!-- Items Loop -->
+                <div style="margin-bottom: 20px;">
+                    {% for item in kot.items.all %}
+                        {% if not item.is_cancelled %}
+                        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.95rem;">
+                            <span><strong style="color: var(--saffron);">{{ item.quantity }}x</strong> {{ item.menu_variant.menu_item.name }}</span>
+                            <span style="font-size: 0.8rem; color: var(--slate-500);">({{ item.menu_variant.size_name }})</span>
+                        </div>
+                        {% if item.notes %}
+                            <div style="font-size: 0.8rem; color: #b45309; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; font-style: italic;">
+                                📝 {{ item.notes }}
+                            </div>
+                        {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Pipeline Progress Action Button -->
+            <div style="border-top: 1px solid var(--light-gray); padding-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #1e3a8a; background: #dbeafe; padding: 4px 8px; border-radius: 6px;">
+                    {{ kot.get_prep_status_display }}
+                </span>
+                
+                <!-- Quick link straight back to the traditional pos screen billing matrix if needed -->
+                <a href="{% if kot.table %}{% url 'billing_screen' kot.table.id %}{% else %}{% url 'billing_screen_direct' %}?order_id={{ kot.id }}{% endif %}" 
+                   style="text-decoration: none; background: var(--dark); color: white; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; transition: opacity 0.2s;">
+                    Open Bill ➔
+                </a>
+            </div>
+
+        </div>
+        {% empty %}
+        <div style="grid-column: 1 / -1; background: white; padding: 40px; border-radius: 16px; text-align: center; color: var(--slate-500); border: 1px dashed var(--slate-200);">
+            🍳 No live kitchen tickets cooking right now! All tables are cleared.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

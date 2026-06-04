@@ -1,27 +1,724 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>KOSHUR POS | LOGIN</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koshur POS - Sign In</title>
+    <!-- FontAwesome for the UI icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0f172a; color: white; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 24px; width: 350px; color: #0f172a; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
-        .brand { font-weight: 800; font-size: 1.5rem; margin-bottom: 20px; }
-        .brand span { color: #f97316; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
-        button { background: #f97316; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+        :root {
+            /* Koshur POS Dark Theme Palette using Saffron & Chinar elements */
+            --bg-main: #0f172a;               /* Deep slate dark background */
+            --card-bg: #1e293b;               /* Lighter card panel background */
+            --saffron-orange: #f97316;        /* Saffron core project accent */
+            --saffron-hover: #ea580c;         /* Saffron button hover depth */
+            --chinar-autumn: #e65100;         /* Deep burnt autumn leaf orange */
+            --text-light: #f8fafc;            /* Clean off-white primary text */
+            --text-muted: #94a3b8;            /* Slate gray for secondary subtitles */
+            --input-border: #334155;          /* Subtle deep slate borders */
+            --input-bg: #0f172a;              /* Contrasting field interiors */
+            --pill-bg: #334155;               /* Pill tracking block backplates */
+            --error-red: #fca5a5;             /* Readable alert warning text */
+            --error-bg: #7f1d1d;              /* Deep crimson error container */
+            --error-border: #991b1b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Brand Area with CSS Chinar Leaf Vector Shapes */
+        .brand-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        .chinar-leaf-logo {
+            width: 42px;
+            height: 42px;
+            position: relative;
+            background: var(--chinar-autumn);
+            clip-path: polygon(50% 0%, 65% 25%, 55% 30%, 85% 25%, 75% 50%, 95% 55%, 70% 70%, 75% 90%, 53% 78%, 50% 100%, 47% 78%, 25% 90%, 30% 70%, 5% 55%, 25% 50%, 15% 25%, 45% 30%, 35% 25%);
+            filter: drop-shadow(0 2px 8px rgba(230, 81, 0, 0.4));
+        }
+
+        .brand-text {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-light);
+            letter-spacing: -0.5px;
+        }
+
+        .brand-text span {
+            color: var(--saffron-orange);
+        }
+
+        /* Premium Form Card Layout */
+        .login-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            width: 100%;
+            padding: 40px 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-header {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .card-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-light);
+        }
+
+        .card-header p {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Dynamic Error Alert Design */
+        .error-alert {
+            background-color: var(--error-bg);
+            border: 1.5px solid var(--error-border);
+            color: var(--error-red);
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .error-alert svg { flex-shrink: 0; }
+
+        /* Modern Pill/Capsule Segmented Control Selector */
+        .login-tabs { 
+            display: flex; 
+            background: var(--input-bg); 
+            padding: 4px; 
+            border-radius: 12px; 
+            margin-bottom: 24px; 
+            border: 1px solid var(--input-border);
+        }
+        
+        .tab-btn { 
+            flex: 1; 
+            padding: 10px; 
+            background: none; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: 600; 
+            color: var(--text-muted); 
+            font-size: 0.9rem; 
+            border-radius: 8px; 
+        }
+        
+        .tab-btn.active { 
+            background: var(--card-bg); 
+            color: var(--text-light); 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Form Layout Elements */
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i, .input-wrapper button.toggle-password {
+            position: absolute;
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .input-wrapper i {
+            left: 16px;
+        }
+
+        .input-wrapper button.toggle-password {
+            right: 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .input-wrapper button.toggle-password:hover {
+            color: var(--saffron-orange);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 15px;
+            border: 1.5px solid var(--input-border);
+            border-radius: 12px;
+            outline: none;
+            color: var(--text-light);
+            background-color: var(--input-bg);
+        }
+
+        .has-icon .form-input {
+            padding-left: 46px;
+        }
+        
+        .has-password-toggle .form-input {
+            padding-right: 46px;
+        }
+
+        .form-input::placeholder {
+            color: #475569;
+        }
+
+        .form-input:focus {
+            border-color: var(--saffron-orange);
+            background-color: var(--input-bg);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15);
+        }
+
+        /* Identity Verification Tracking Pill Container */
+        .identity-pill {
+            background-color: var(--pill-bg);
+            padding: 12px 18px;
+            border-radius: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .change-link {
+            color: var(--saffron-orange);
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .change-link:hover {
+            color: var(--saffron-hover);
+            text-decoration: underline;
+        }
+
+        .flex-row-justify {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-light);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .checkbox-container input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--saffron-orange);
+            cursor: pointer;
+        }
+
+        .timer-text {
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* Core Call to Actions */
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--saffron-orange);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.2);
+        }
+
+        .btn-submit:hover {
+            background-color: var(--saffron-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            background-color: #475569;
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Footer Utilities */
+        .card-footer-links {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--input-border);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .card-footer-links button {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .card-footer-links button:hover {
+            color: var(--saffron-orange);
+            text-decoration: underline;
+        }
+
+        .page-footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.8;
+        }
+
+        .page-footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin: 0 6px;
+        }
+        .page-footer-links a:hover {
+            color: var(--text-light);
+        }
+
+        /* Registration Details Overlay Modal Container */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--input-border);
+            padding: 32px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        .modal-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .contact-option {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            padding: 14px 18px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            text-decoration: none;
+            color: var(--text-light);
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .contact-option:hover {
+            border-color: var(--saffron-orange);
+            background: var(--pill-bg);
+        }
+
+        .contact-option i {
+            font-size: 18px;
+            color: var(--saffron-orange);
+            width: 24px;
+        }
+
+        .btn-close-modal {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 12px;
+            cursor: pointer;
+        }
+        .btn-close-modal:hover {
+            color: var(--text-light);
+        }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <div class="login-card">
-        <div class="brand">KOSHUR <span>POS</span></div>
-        <form method="post">
-            {% csrf_token %}
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
 
-            
-        </form>
+<div class="login-container">
+    
+    <!-- Koshur POS Autumn Saffron Logo Header Section -->
+    <div class="brand-logo-area">
+        <div class="chinar-leaf-logo"></div>
+        <div class="brand-text">KOSHUR<span> POS</span></div>
     </div>
+
+    <!-- Container for dynamic error alerts -->
+    <div id="alertWrapper">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-alert">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- CORE FORM ROUTER CARD -->
+    <div class="login-card">
+        
+        <!-- STEP 1: Identification Intake Layout -->
+        <div id="step-identifier">
+            <div class="card-header">
+                <h2>Sign In</h2>
+                <p>to access Account</p>
+            </div>
+            
+            <form id="form-identifier" onsubmit="handleIdentifierSubmit(event)">
+                <div class="form-group">
+                    <input type="text" id="user-identity" class="form-input" placeholder="Email address or mobile number" required autocomplete="username">
+                </div>
+                
+                <button type="submit" id="btn-continue" class="btn-submit">Continue</button>
+            </form>
+        </div>
+
+        <!-- STEP 2: Unified Secure Verification Layout (Password/OTP Router) -->
+        <div id="step-verification" class="hidden">
+            <div class="card-header">
+                <h2>Sign In</h2>
+            </div>
+
+            <div class="identity-pill">
+                <span id="display-identity"></span>
+                <span class="change-link" onclick="goToStepOne()">Change</span>
+            </div>
+
+            <!-- Premium Dynamic Segmented Control Selector -->
+            <div class="login-tabs">
+                <button type="button" class="tab-btn active" id="passwordTab" onclick="switchVerificationMethod('password')">Password</button>
+                <button type="button" class="tab-btn" id="otpTab" onclick="switchVerificationMethod('otp')">OTP Login</button>
+            </div>
+            
+            <form id="form-login" method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="username" id="backend-username-field">
+                <input type="hidden" name="login_method" id="loginMethodField" value="password">
+                
+                <!-- Password Flow Selection Sub-container -->
+                <div id="passwordSection">
+                    <div class="form-group">
+                        <label class="form-label" for="passwordField">Password</label>
+                        <div class="input-wrapper has-icon has-password-toggle">
+                            <i class="fa-solid fa-lock"></i>
+                            <input type="password" name="password" id="passwordField" class="form-input" placeholder="Enter your password">
+                            <button type="button" class="toggle-password" id="togglePasswordBtn" title="Toggle Password Visibility">
+                                <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OTP Flow Selection Sub-container -->
+                <div id="otpSection" class="hidden">
+                    <div class="form-group">
+                        <label class="form-label" for="otpField">OTP</label>
+                        <div class="input-wrapper has-icon">
+                            <i class="fa-solid fa-key"></i>
+                            <input type="text" name="otp" id="otpField" class="form-input" placeholder="Enter here..." maxlength="6" autocomplete="one-time-code">
+                        </div>
+                    </div>
+
+                    <div class="flex-row-justify">
+                        <label class="checkbox-container">
+                            <input type="checkbox" name="remember_me" checked> Remember Me
+                        </label>
+                        <span class="timer-text">18 Seconds</span>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-submit">Sign In</button>
+            </form>
+        </div>
+
+        <div class="card-footer-links">
+            New in Koshur POS? <button type="button" onclick="toggleModal(true)">Contact Us</button>
+        </div>
+    </div>
+
+    <!-- Platform Footer -->
+    <div class="page-footer">
+        <p>&copy; 2026 Koshur POS (Koshur Food Services Pvt. Ltd.)</p>
+        <div class="page-footer-links">
+            <a href="#">Privacy</a>
+            <a href="#">Terms & conditions</a>
+        </div>
+    </div>
+</div>
+
+<!-- Contact overlay modal popup for new registration profiles -->
+<div id="contactModal" class="modal-overlay" onclick="if(event.target === this) toggleModal(false)">
+    <div class="modal-card">
+        <h3>Create an Account</h3>
+        <p>Get in touch with us to register your outlet credentials.</p>
+        
+        <a href="mailto:lonezakir1326@gmail.com?subject=Koshur%20POS%20Account%20Registration" class="contact-option">
+            <i class="fa-solid fa-envelope"></i>
+            <span>lonezakir1326@gmail.com</span>
+        </a>
+        
+        <a href="tel:+919149562695" class="contact-option">
+            <i class="fa-solid fa-phone"></i>
+            <span>+91 9149562695</span>
+        </a>
+        
+        <button type="button" class="btn-close-modal" onclick="toggleModal(false)">Cancel</button>
+    </div>
+</div>
+
+<script>
+    const stepIdentifier = document.getElementById('step-identifier');
+    const stepVerification = document.getElementById('step-verification');
+    const userIdentityInput = document.getElementById('user-identity');
+    const displayIdentity = document.getElementById('display-identity');
+    const backendUsernameField = document.getElementById('backend-username-field');
+    const alertWrapper = document.getElementById('alertWrapper');
+    const btnContinue = document.getElementById('btn-continue');
+    const contactModal = document.getElementById('contactModal');
+    
+    const loginMethodField = document.getElementById('loginMethodField');
+    const passwordSection = document.getElementById('passwordSection');
+    const otpSection = document.getElementById('otpSection');
+    const passwordField = document.getElementById('passwordField');
+    const otpField = document.getElementById('otpField');
+
+    // --- Dynamic Alerts ---
+    if (!window.displayRuntimeError) {
+        window.displayRuntimeError = function(message) {
+            alertWrapper.innerHTML = `
+                <div class="error-alert">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>${message}</span>
+                </div>
+            `;
+        };
+    }
+
+    function clearErrors() {
+        alertWrapper.innerHTML = "";
+    }
+
+    // --- Step 1: Handle AJAX Account Identifier Check ---
+    function handleIdentifierSubmit(event) {
+        event.preventDefault();
+        const identityValue = userIdentityInput.value.trim();
+        if (!identityValue) return;
+
+        clearErrors();
+        btnContinue.disabled = true;
+        btnContinue.textContent = "Verifying...";
+
+        const formData = new FormData();
+        formData.append('identifier', identityValue);
+
+        fetch('/auth/check-identifier/', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json().then(data => ({ status: response.status, body: data })))
+        .then(res => {
+            btnContinue.disabled = false;
+            btnContinue.textContent = "Continue";
+            
+            if (res.status === 200) {
+                // Success: Flip over to Verification card view panels cleanly
+                displayIdentity.textContent = identityValue;
+                backendUsernameField.value = identityValue;
+                stepIdentifier.classList.add('hidden');
+                stepVerification.classList.remove('hidden');
+                switchVerificationMethod('password'); // Default path view fallback execution
+            } else {
+                displayRuntimeError(res.body.message || "An account authorization validation error occurred.");
+            }
+        })
+        .catch(err => {
+            btnContinue.disabled = false;
+            btnContinue.textContent = "Continue";
+            displayRuntimeError("Connection error. Please check your local network connection.");
+        });
+    }
+
+    // --- Step 2: Handle Tab View Method Toggling ---
+    function switchVerificationMethod(method) {
+        clearErrors();
+        loginMethodField.value = method;
+        
+        const passwordTab = document.getElementById('passwordTab');
+        const otpTab = document.getElementById('otpTab');
+
+        if (method === 'password') {
+            passwordTab.classList.add('active');
+            otpTab.classList.remove('active');
+            passwordSection.classList.remove('hidden');
+            otpSection.classList.add('hidden');
+            
+            passwordField.setAttribute('required', 'true');
+            otpField.removeAttribute('required');
+        } else {
+            otpTab.classList.add('active');
+            passwordTab.classList.remove('active');
+            otpSection.classList.remove('hidden');
+            passwordSection.classList.add('hidden');
+            
+            otpField.setAttribute('required', 'true');
+            passwordField.removeAttribute('required');
+        }
+    }
+
+    // --- Show/Hide Password Eye Toggle Engine ---
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    togglePasswordBtn.addEventListener('click', () => {
+        const isPassword = passwordField.type === 'password';
+        passwordField.type = isPassword ? 'text' : 'password';
+        eyeIcon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    });
+
+    // --- Form Navigation Utilities ---
+    function goToStepOne() {
+        clearErrors();
+        stepVerification.classList.add('hidden');
+        stepIdentifier.classList.remove('hidden');
+        userIdentityInput.focus();
+    }
+
+    function toggleModal(show) {
+        if (show) {
+            contactModal.classList.add('active');
+        } else {
+            contactModal.classList.remove('active');
+        }
+    }
+
+    // --- Session Error Step Maintenance Hook ---
+    window.addEventListener('DOMContentLoaded', () => {
+        const fallbackUser = "{{ error_username|default:'' }}";
+        if (fallbackUser !== "") {
+            displayIdentity.textContent = fallbackUser;
+            backendUsernameField.value = fallbackUser;
+            stepIdentifier.classList.add('hidden');
+            stepVerification.classList.remove('hidden');
+            switchVerificationMethod('otp'); // Maintain active contextual focus configuration
+        }
+    });
+</script>
+
 </body>
 </html>

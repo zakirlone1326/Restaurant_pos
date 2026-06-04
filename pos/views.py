@@ -4,9 +4,16 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt 
 from django.db.models.functions import Length
 from django.db import transaction
-from django.db.models import Sum, F, DecimalField, Q, Avg
+from django.db.models import Sum, F, DecimalField, Q, Avg, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
+import re
+import random
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.contrib.auth import get_user_model, authenticate, login, logout
+from django.contrib import messages
+
 from .models import (
     Table, Order, Restaurant, MenuItem, MenuVariant, 
     OrderItem, Category, Expense, ExpenseCategory,
@@ -14,15 +21,144 @@ from .models import (
 )
 from .utils import send_staff_notification
 
+User = get_user_model()
+
+
 # ==========================================
-# 🏢 KOSHUR POS - CUSTOM MANAGER DASHBOARD
+# 🔐 KOSHUR POS - AUTHENTICATION WORKFLOWS
+# ==========================================
+@csrf_exempt
+@require_http_methods(["POST"])
+def check_identifier_and_send_otp(request):
+    """
+    Validates if an email/phone exists before issuing OTP.
+    Returns clear errors if user isn't registered yet.
+    """
+    identifier = request.POST.get("identifier", "").strip().lower()
+    
+    if not identifier:
+        return JsonResponse({"status": "error", "message": "Please enter an email or phone number."}, status=400)
+    
+    is_email = False
+    try:
+        validate_email(identifier)
+        is_email = True
+    except ValidationError:
+        is_phone = bool(re.match(r'^\+?[1-9]\d{1,14}$', identifier))
+        if not is_phone:
+            return JsonResponse({"status": "error", "message": "Please enter a valid email or phone number."}, status=400)
+
+    try:
+        if is_email:
+            user = User.objects.get(email__iexact=identifier)
+        else:
+            user = User.objects.get(username=identifier)
+            
+    except User.DoesNotExist:
+        return JsonResponse({
+            "status": "error", 
+            "message": "Not registered email or phone number."
+        }, status=404)
+
+    otp_code = str(random.randint(100000, 999999))
+    
+    request.session['pending_otp'] = otp_code
+    request.session['pending_user_id'] = user.id
+    
+    print("\n" + "="*40)
+    print(f"🔥 KOSHUR POS DEBUG OTP CODE FOR {identifier}: {otp_code} 🔥")
+    print("="*40 + "\n")
+
+    return JsonResponse({
+        "status": "success",
+        "message": "OTP sent successfully."
+    }, status=200)
+
+
+def koshur_login_view(request):
+    """
+    Unified router handling final submission logic for both static passwords and OTPs.
+    Strictly forces superusers to /admin/ and standard floor staff to /table/.
+    """
+    if request.method == "POST":
+        login_method = request.POST.get("login_method", "password")
+        
+        # ----------------- OPTION 1: STATIC PASSWORD FLOW -----------------
+        if login_method == "password":
+            username_input = request.POST.get("username", "").strip().lower()
+            password_input = request.POST.get("password", "").strip()
+            
+            if "@" in username_input:
+                try:
+                    user_record = User.objects.get(email__iexact=username_input)
+                    username_input = user_record.username
+                except User.DoesNotExist:
+                    pass
+            
+            user = authenticate(request, username=username_input, password=password_input)
+            if user is not None:
+                login(request, user)
+                
+                fresh_user_check = User.objects.get(id=user.id)
+                if fresh_user_check.is_superuser:
+                    return redirect('/admin/')
+                else:
+                    return redirect('table_dashboard')
+            else:
+                messages.error(request, "Invalid email/phone number or password.")
+                return render(request, 'Registration/login.html')
+
+        # ----------------- OPTION 2: ONE-TIME PASSPHRASE FLOW -----------------
+        elif login_method == "otp":
+            submitted_otp = request.POST.get("otp", "").strip()
+            backend_username = request.POST.get("username", "").strip()
+            
+            session_otp = request.session.get('pending_otp')
+            pending_user_id = request.session.get('pending_user_id')
+            
+            if not session_otp or not pending_user_id:
+                messages.error(request, "Session expired. Please request a new OTP.")
+                return redirect('login')
+                
+            if submitted_otp != session_otp:
+                messages.error(request, "Invalid verification code. Please try again.")
+                return render(request, 'Registration/login.html', {'error_username': backend_username})
+                
+            try:
+                user = User.objects.get(id=pending_user_id)
+                login(request, user)
+                
+                del request.session['pending_otp']
+                del request.session['pending_user_id']
+                
+                fresh_user_check = User.objects.get(id=user.id)
+                if fresh_user_check.is_superuser:
+                    return redirect('/admin/')
+                else:
+                    return redirect('table_dashboard')
+                
+            except User.DoesNotExist:
+                messages.error(request, "User synchronization error occurred.")
+                return redirect('login')
+                
+    return render(request, 'Registration/login.html')
+
+
+def koshur_logout_view(request):
+    """Logs out active terminal profiles securely"""
+    logout(request)
+    return redirect('login')
+
+
+# ==========================================
+# 🏢 KOSHUR POS - EXECUTIVE DASHBOARDS
 # ==========================================
 def kashur_admin_dashboard(request):
-    """Custom Management Hub with Petpooja-style Analytics"""
-    if not request.user.is_staff:
-        return redirect('login')
+    """Custom Management Hub with Petpooja-style Analytics & Inline Panel Lists"""
+    if not request.user.is_superuser:
+        return redirect('table_dashboard')
 
-    # 1. Range Logic for Filters
+    active_view = request.GET.get('view', 'dashboard')
     period = request.GET.get('period', 'today')
     end_date = timezone.now().date()
     start_date = end_date
@@ -51,7 +187,6 @@ def kashur_admin_dashboard(request):
     else:
         display_date = f"{start_date.strftime('%d %b')} to {end_date.strftime('%d %b')}"
 
-    # 2. Main Queries
     orders_qs = Order.objects.filter(
         created_at__date__range=[start_date, end_date], 
         is_cancelled=False
@@ -95,7 +230,6 @@ def kashur_admin_dashboard(request):
     restaurant = Restaurant.objects.first()
     staff_present = Attendance.objects.filter(date=timezone.now().date(), is_present=True).count()
 
-    # 3. Graph Logic
     graph_data = [] 
     total_days = (end_date - start_date).days
 
@@ -117,25 +251,15 @@ def kashur_admin_dashboard(request):
                 'amount': float(slot_rev)
             })
     else:
-        if total_days <= 10:
-            step = 1
-        elif total_days <= 31:
-            step = 3
-        else:
-            step = 7
-
+        step = 1 if total_days <= 10 else (3 if total_days <= 31 else 7)
         for i in range(0, total_days + 1, step):
             curr_start = start_date + timedelta(days=i)
             curr_end = min(curr_start + timedelta(days=step - 1), end_date)
             bucket_rev = orders_qs.filter(created_at__date__range=[curr_start, curr_end]).aggregate(
                 total=Sum('grand_total'))['total'] or 0
             
-            if step == 1:
-                p_label = curr_start.strftime('%d %b')
-                r_label = curr_start.strftime('%A, %d %b %Y')
-            else:
-                p_label = curr_start.strftime('%d %b')
-                r_label = f"{curr_start.strftime('%d %b')} - {curr_end.strftime('%d %b')}"
+            p_label = curr_start.strftime('%d %b')
+            r_label = curr_start.strftime('%A, %d %b %Y') if step == 1 else f"{curr_start.strftime('%d %b')} - {curr_end.strftime('%d %b')}"
 
             graph_data.append({
                 'point_label': p_label,
@@ -155,6 +279,11 @@ def kashur_admin_dashboard(request):
         return {'rev': float(rev), 'count': count, 'avg': avg}
 
     context = {
+        'active_view': active_view,
+        'all_expenses': Expense.objects.all().order_by('-date')[:30],
+        'expense_categories': ExpenseCategory.objects.all(),
+        'employees_list': Employee.objects.all().order_by('name'),
+        'all_tables': Table.objects.all().order_by('table_number'),
         'display_date': display_date, 
         'revenue': float(revenue),
         'expenses': float(expenses),
@@ -177,17 +306,106 @@ def kashur_admin_dashboard(request):
         'end_date': end_date.strftime('%Y-%m-%d'),
         'restaurant_name': restaurant.name if restaurant else "KOSHUR POS",
     }
-    return render(request, 'admin/custom_dashboard.html', context)
+    return render(request, 'admin/admin_dashboard.html', context)
+
+
+# --- OPERATIONAL TAB CONTROLLERS  ---
+
+def live_orders(request):
+    """Operational track view for active/unsettled tickets"""
+    active_orders = Order.objects.filter(is_settled=False, is_cancelled=False)
+    
+    running_qs = active_orders.filter(payment_status='UNPAID')
+    running_totals = running_qs.aggregate(c=Count('id'), s=Sum('grand_total'))
+    
+    pending_qs = active_orders.exclude(prep_status='COMPLETED')
+    pending_totals = pending_qs.aggregate(c=Count('id'), s=Sum('grand_total'))
+
+    context = {
+        'running_count': running_totals['c'] or 0,
+        'running_amount': float(running_totals['s'] or 0.00),
+        'dine_in_amount': float(running_qs.filter(order_type='DINE_IN').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+        'pickup_amount': float(running_qs.filter(order_type='PICK_UP').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+        'delivery_amount': float(running_qs.filter(order_type='DELIVERY').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+
+        'pending_count': pending_totals['c'] or 0,
+        'pending_amount': float(pending_totals['s'] or 0.00),
+        'prep_amount': float(pending_qs.filter(prep_status='IN_PREPARATION').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+        'waiting_amount': float(pending_qs.filter(prep_status='WAITING_FOR_PICKUP').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+        'out_amount': float(pending_qs.filter(prep_status='OUT_FOR_DELIVERY').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+    }
+    return render(request, 'pos/live_orders.html', context)
+
+
+def all_orders_view(request):
+    """Historical data table view with net analytics layout"""
+    orders_list = Order.objects.all().order_by('-created_at')
+    grand_total_history = orders_list.filter(is_cancelled=False).aggregate(s=Sum('grand_total'))['s'] or 0.00
+    return render(request, 'pos/all_orders.html', {
+        'orders': orders_list, 
+        'grand_total': float(grand_total_history)
+    })
+
+
+def kot_management(request):
+    """Kitchen Order Ticket dispatch terminal layout logger"""
+    active_kots = Order.objects.exclude(prep_status='COMPLETED').order_by('-created_at')
+    return render(request, 'pos/kot_list.html', {'kots': active_kots})
+
+
+def menu_hub(request):
+    """Advanced Multi-Stage Menu Tab Routing Processor Matrix"""
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    stage = request.GET.get('stage', '1')
+    tab = request.GET.get('tab', 'items')
+
+    categories = Category.objects.all().prefetch_related('items__variants')
+    items = MenuItem.objects.all().order_by('category__name', 'name')
+
+    context = {
+        'stage': stage,
+        'tab': tab,
+        'categories': categories,
+        'items': items,
+        'restaurant_name': Restaurant.objects.first().name if Restaurant.objects.exists() else "KOSHUR POS",
+    }
+    return render(request, 'pos/menu_management.html', context)
+
+
+def menu_all_in_one(request):
+    """Sub-catalog layout matrix screen segmenter"""
+    return render(request, 'pos/pos_screen.html')
+
+
+def menu_item_list(request):
+    """Comprehensive catalog search control sheet with shortcodes"""
+    categories = Category.objects.all().prefetch_related('items__variants')
+    items = MenuItem.objects.all().order_by('category__name', 'name')
+    return render(request, 'pos/menu_management.html', {
+        'categories': categories, 
+        'items': items
+    })
 
 
 # ==========================================
 # 🏠 FRONTEND - TABLE FLOOR PLAN
 # ==========================================
 def table_dashboard(request):
+    """Floor layout plan accessible to both managers and base table-service staff"""
+    if not request.user.is_authenticated:
+        return redirect('login')
+        
     restaurant = Restaurant.objects.first()
     tables = Table.objects.all().order_by(Length('table_number').asc(), 'table_number')
+    
     for table in tables:
-        active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+        # We explicitly exclude both 'PAID' and 'PENDING' so the table shows as free
+        active_order = table.orders.filter(is_cancelled=False).exclude(
+            Q(payment_status='PAID') | Q(payment_status='PENDING')
+        ).first()
+        
         table.start_time_iso = active_order.created_at.isoformat() if active_order else None
 
     return render(request, 'pos/table_dashboard.html', {
@@ -197,7 +415,7 @@ def table_dashboard(request):
 
 
 # ==========================================
-# 🍽️ POS TERMINAL LOGIC (ROBUST SPLIT FLOWS)
+# 🍽️ POS TERMINAL LINE BILLING SERVICES
 # ==========================================
 @require_http_methods(["POST"])
 @transaction.atomic
@@ -205,7 +423,12 @@ def start_order(request, table_id):
     table = get_object_or_404(Table, id=table_id)
     if table.status != 'AVAILABLE':
         return JsonResponse({'error': 'Table is already occupied'}, status=400)
-    order = Order.objects.create(table=table, payment_status='UNPAID', order_type='DINE_IN')
+    order = Order.objects.create(
+        table=table,
+        restaurant=table.restaurant,
+        payment_status='UNPAID',
+        order_type='DINE_IN'
+    )
     table.status = 'OCCUPIED'
     table.save()
     return JsonResponse({'success': True, 'order_id': order.id})
@@ -217,10 +440,21 @@ def start_order(request, table_id):
 def create_direct_order(request):
     """Instantly creates table-free Walk-in, Pickup, or Delivery orders from dashboard"""
     try:
+        # 1. Fetch the restaurant
+        restaurant = Restaurant.objects.first()
+        if not restaurant:
+            return JsonResponse({'success': False, 'error': 'No restaurant configured'}, status=500)
+
         order_type = request.POST.get('order_type', 'DINE_IN').upper()
-        order = Order.objects.create(order_type=order_type, payment_status='UNPAID', table=None)
         
-        # FIX: Collect client identifiers universally for both delivery and pickup configurations safely
+        # 2. Include 'restaurant=restaurant' in the creation
+        order = Order.objects.create(
+            order_type=order_type, 
+            payment_status='UNPAID', 
+            table=None,
+            restaurant=restaurant  # <--- THIS IS THE FIX
+        )
+        
         if order_type in ['DELIVERY', 'PICK_UP']:
             order.customer_name = request.POST.get('customer_name', '').strip()
             order.customer_phone = request.POST.get('customer_phone', '').strip()
@@ -232,12 +466,18 @@ def create_direct_order(request):
             
         return JsonResponse({'success': True, 'order_id': order.id})
     except Exception as e:
+        print("ERROR CREATING ORDER:", str(e)) # Helps see the error in terminal
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-
 def billing_screen(request, table_id=None):
-    """Supports traditional table views or straight query param direct orders"""
-    categories = Category.objects.all()
+    """
+    Renders the POS screen using Server-Side Rendering.
+    Data is pre-fetched and passed directly to the template.
+    """
+    # prefetch_related('items__variants') follows the 'items' related_name
+    # and then grabs all variants for every item in one efficient query.
+    categories = Category.objects.prefetch_related('items__variants').all()
+    
     restaurant_name = Restaurant.objects.first().name if Restaurant.objects.exists() else "KOSHUR POS"
     
     context = {
@@ -247,6 +487,7 @@ def billing_screen(request, table_id=None):
         'direct_order': None
     }
     
+    # Handle routing for Table or Direct Orders
     if table_id and str(table_id) != '0':
         context['table'] = get_object_or_404(Table, id=table_id)
     else:
@@ -264,41 +505,53 @@ def add_item_to_order(request):
     try:
         table_id = request.POST.get('table_id')
         order_id = request.POST.get('order_id')
-        menu_item_id = request.POST.get('menu_item_id')
+        variant_id = request.POST.get('variant_id')
         
-        active_order = None
+        if not variant_id:
+            return JsonResponse({'error': 'Variant ID missing'}, status=400)
 
+        # 1. Get Variant
+        variant = get_object_or_404(MenuVariant, id=variant_id)
+        
+        # 2. Get/Create Active Order
+        active_order = None
         if order_id:
             active_order = get_object_or_404(Order, id=order_id, is_cancelled=False)
         elif table_id and str(table_id) != '0':
             table = get_object_or_404(Table, id=table_id)
             active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
             if not active_order:
-                active_order = Order.objects.create(table=table, payment_status='UNPAID', order_type='DINE_IN')
-                table.status = 'OCCUPIED'
-                table.save()
-        else:
-            return JsonResponse({'error': 'Missing valid routing parameters'}, status=400)
+                active_order = Order.objects.create(
+                    table=table, 
+                    restaurant=table.restaurant, 
+                    payment_status='UNPAID', 
+                    order_type='DINE_IN'
+                )
         
-        menu_item = get_object_or_404(MenuItem, id=menu_item_id)
-        variant = menu_item.variants.first() 
-        
-        if not variant:
-            return JsonResponse({'error': 'No price variant found for this item'}, status=400)
+        if not active_order:
+            return JsonResponse({'error': 'No active order context found'}, status=400)
 
+        # 3. Get or Create OrderItem
+        # REMOVED: 'name' and 'price' from defaults as they don't exist in the model
         order_item, created = OrderItem.objects.get_or_create(
             order=active_order, 
             menu_variant=variant, 
             is_cancelled=False,
             defaults={'quantity': 1}
         )
+        
         if not created:
             order_item.quantity += 1
             order_item.save()
         
-        active_order.update_totals()
+        # 4. Finalize
+        active_order.update_totals(save=True)
+        
         return JsonResponse({'success': True, 'total': float(active_order.grand_total)})
+        
     except Exception as e:
+        import traceback
+        traceback.print_exc() # This will print the error in your terminal
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -322,11 +575,24 @@ def delete_item(request):
 
 def _get_active_order(table_id, request):
     if table_id and str(table_id) != '0' and str(table_id) != 'None':
+
         table = get_object_or_404(Table, id=table_id)
-        return table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first(), table
+
+        order = table.orders.filter(
+            is_cancelled=False
+        ).exclude(
+            payment_status='PAID'
+        ).order_by('-id').first()
+
+        return order, table
+
     else:
         order_id = request.GET.get('order_id') or request.POST.get('order_id')
-        return get_object_or_404(Order, id=order_id) if order_id else None, None
+
+        if order_id:
+            return get_object_or_404(Order, id=order_id), None
+
+        return None, None
 
 
 @csrf_exempt
@@ -377,47 +643,37 @@ def toggle_gst(request, table_id):
     return JsonResponse({'error': 'Order not found'}, status=400)
 
 
+
 @csrf_exempt
 @require_http_methods(["POST"])
 @transaction.atomic
 def settle_order(request, table_id):
     order, table = _get_active_order(table_id, request)
     if order:
-        target_status = request.POST.get('payment_status', 'PAID')
-        order.payment_mode = request.POST.get('payment_mode', 'CASH')
+        requested_status = request.POST.get('payment_status', 'PAID')
+        target_status = requested_status if requested_status in ['PAID', 'PENDING'] else 'PAID'
+        payment_mode = request.POST.get('payment_mode') or None
+
+        if payment_mode not in ['CASH', 'ONLINE', 'CARD']:
+            payment_mode = None
+
+        order.payment_mode = payment_mode
         order.payment_status = target_status
-        order.is_settled = True if target_status == 'PAID' else False
+        
+        # FIX: Even if Pending, we set is_settled=True to remove it from the cart.
+        # Your admin reports can still find this order by filtering: Order.objects.filter(payment_status='PENDING')
+        order.is_settled = True 
         order.save()
-        if target_status == 'PAID' and table:
+        
+        if table:
             table.status = 'AVAILABLE'
             table.save()
+            
         return JsonResponse({'success': True, 'status': target_status})
     return JsonResponse({'error': 'Order not found'}, status=400)
 
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def update_order_type(request):
-    table_id = request.POST.get('table_id')
-    order_id = request.POST.get('order_id')
-    order_type = request.POST.get('order_type')
-    
-    active_order = None
-    if order_id:
-        active_order = get_object_or_404(Order, id=order_id)
-    elif table_id and str(table_id) != '0':
-        table = get_object_or_404(Table, id=table_id)
-        active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
-
-    if active_order:
-        active_order.order_type = order_type
-        active_order.save()
-        return JsonResponse({'success': True})
-    return JsonResponse({'error': 'No active order found'}, status=400)
-
-
 # ==========================================
-# 👥 STAFF & ATTENDANCE LOGIC
+# 👥 STAFF & ATTENDANCE SERVICE MODULES
 # ==========================================
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -476,7 +732,7 @@ def attendance_report(request):
 
 
 # ==========================================
-# 📊 ANALYTICS & UTILITIES
+# 📊 AUXILIARY DATA HANDLERS & PRINTER HOOKS
 # ==========================================
 def admin_analytics(request):
     res = Restaurant.objects.first()
@@ -530,45 +786,40 @@ def admin_analytics(request):
     })
 
 
-def get_menu(request):
-    menu_data = []
-    categories = Category.objects.all()
-    for cat in categories:
-        items = MenuItem.objects.filter(category=cat, is_available=True)
-        cat_items = [{'id': i.id, 'name': i.name, 'price': float(i.variants.first().price)} for i in items if i.variants.exists()]
-        if cat_items:
-            menu_data.append({'category_name': cat.name, 'items': cat_items})
-    return JsonResponse({'menu': menu_data})
-
-
 def get_order_status(request, table_id):
+
     order, _ = _get_active_order(table_id, request)
+
     if not order:
-        return JsonResponse({'active': False})
-    
+        return JsonResponse({
+            'active': False
+        })
+
     items_list = []
-    
-    # 👇 FIXED HERE: Added .order_by('id') to prevent items from shifting positions 👇
-    active_items = order.items.filter(is_cancelled=False).order_by('id')
-    
-    for i in active_items:
+
+    active_items = order.items.filter(
+        is_cancelled=False
+    ).order_by('id')
+
+    for item in active_items:
         items_list.append({
-            'id': i.id, 
-            'menu_item_id': i.menu_variant.menu_item.id, 
-            'name': i.menu_variant.menu_item.name, 
-            'qty': i.quantity, 
-            'price': float(i.total_price)
+            'id': item.id,
+            'menu_item_id': item.menu_variant.menu_item.id,
+            'variant_id': item.menu_variant.id,
+            'name': item.menu_variant.menu_item.name,
+            'variant_name': item.menu_variant.size_name,
+            'qty': item.quantity,
+            'price': float(item.total_price)
         })
 
     return JsonResponse({
-        'active': True, 
-        'order_type': order.order_type, 
-        'payment_status': order.payment_status, 
+        'active': True,
+        'order_type': order.order_type,
+        'payment_status': order.payment_status,
         'apply_gst': order.apply_gst,
-        'items': items_list, 
+        'items': items_list,
         'grand_total': float(order.grand_total)
     })
-
 
 def print_invoice(request, table_id):
     order, _ = _get_active_order(table_id, request)
@@ -604,27 +855,15 @@ def print_kot(request, table_id):
     })
 
 
-# ==========================================
-# 🍴 NEW: MENU MANAGEMENT VIEWS
-# ==========================================
-def menu_management(request):
-    if not request.user.is_staff:
-        return redirect('admin:login')
-    
-    categories = Category.objects.all().prefetch_related('menuitem_set__variants')
-    query = request.GET.get('q')
-    if query:
-        categories = Category.objects.filter(menuitem_set__name__icontains=query).distinct().prefetch_related('menuitem_set__variants')
 
-    return render(request, 'pos/menu_management.html', {
-        'categories': categories,
-        'restaurant_name': Restaurant.objects.first().name if Restaurant.objects.exists() else "KOSHUR POS"
-    })
-
+# ==========================================
+# 🧱 INTERNAL INVENTORY CONTROL HANDLERS
+# ==========================================
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def toggle_item_status(request):
+    """Instantly toggles stock availability from the Menu management switches"""
     item_id = request.POST.get('item_id')
     item = get_object_or_404(MenuItem, id=item_id)
     item.is_available = not item.is_available
@@ -635,6 +874,7 @@ def toggle_item_status(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def update_item_price(request):
+    """Handles inline price modifications from the bulk edit inputs"""
     item_id = request.POST.get('item_id')
     new_price = request.POST.get('price')
     item = get_object_or_404(MenuItem, id=item_id)
@@ -643,12 +883,13 @@ def update_item_price(request):
         variant.price = new_price
         variant.save()
         return JsonResponse({'success': True})
-    return JsonResponse({'success': False})
+    return JsonResponse({'success': False, 'error': 'No default variant variant found'})
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def delete_menu_item(request):
+    """Safely handles item removal by archiving if historical logs exist"""
     item_id = request.POST.get('item_id')
     try:
         item = MenuItem.objects.get(id=item_id)
@@ -663,3 +904,24 @@ def delete_menu_item(request):
             return JsonResponse({'success': True, 'message': 'Item deleted permanently'})
     except MenuItem.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
+    
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_order_type(request):
+    table_id = request.POST.get('table_id')
+    order_id = request.POST.get('order_id')
+    order_type = request.POST.get('order_type')
+    
+    active_order = None
+    if order_id:
+        active_order = get_object_or_404(Order, id=order_id)
+    elif table_id and str(table_id) != '0':
+        table = get_object_or_404(Table, id=table_id)
+        active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+
+    if active_order:
+        active_order.order_type = order_type
+        active_order.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'No active order found'}, status=400)

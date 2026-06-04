@@ -1,8 +1,24 @@
 from django.urls import path
 from . import views
-from django.contrib.auth import views as auth_views
+
 urlpatterns = [
-    # 👥 STAFF & ATTENDANCE (Highest Priority)
+    # 🔐 KOSHUR POS - AUTHENTICATION WORKFLOWS (Highest Priority)
+    path('login/', views.koshur_login_view, name='login'),
+    path('logout/', views.koshur_logout_view, name='logout'),
+    path('auth/check-identifier/', views.check_identifier_and_send_otp, name='check_identifier'),
+
+    # 🏢 EXECUTIVE CONTROL HUBS & ANALYTICS (PETPOOJA STYLE)
+    path('admin/', views.kashur_admin_dashboard, name='admin_dashboard'),
+    path('live-orders/', views.live_orders, name='live_orders'),
+    path('all-orders/', views.all_orders_view, name='all_orders_view'),
+    path('kot/', views.kot_management, name='kot_management'),
+    
+    # 🍴 ADVANCED MENU ROUTING SCHEME (Multi-step Layout Stage Integration)
+    path('menu/', views.menu_hub, name='menu_management'),
+    path('menu/all-in-one/', views.menu_hub, name='menu_all_in_one'),
+    path('menu/items/', views.menu_hub, name='menu_item_list'),
+
+    # 👥 STAFF & ATTENDANCE 
     path('staff/', views.staff_list, name='staff_list'),
     path('attendance/report/', views.attendance_report, name='attendance_report'),
     path('attendance/mark/', views.mark_attendance, name='mark_attendance'),
@@ -10,7 +26,6 @@ urlpatterns = [
 
     # 🏠 HOME & GLOBAL ACTIONS
     path('', views.table_dashboard, name='table_dashboard'),
-    path('menu/', views.get_menu, name='get_menu'),
     path('add-item/', views.add_item_to_order, name='add_item'),
     path('delete-item/', views.delete_item, name='delete_item'),
     path('update-order-type/', views.update_order_type, name='update_order_type'),
@@ -30,15 +45,12 @@ urlpatterns = [
     path('table/<int:table_id>/print-invoice/', views.print_invoice, name='print_invoice'),
     path('table/<int:table_id>/print-kot/', views.print_kot, name='print_kot'),
 
-    # Menu Management
-    path('menu-control/', views.menu_management, name='menu_management'),
+    # 🛠️ INTERNAL INVENTORY ACTIONS
     path('toggle-item-status/', views.toggle_item_status, name='toggle_item_status'),
     path('update-item-price/', views.update_item_price, name='update_item_price'),
     path('delete-menu-item/', views.delete_menu_item, name='delete_menu_item'),
 
-     path('login/', auth_views.LoginView.as_view(), name='login'),
-     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
-
-     path('pos/direct-order/', views.billing_screen, name='billing_screen_direct'),
+    # 🛵 DIRECT & TABLE-FREE BILLING DISPATCH
+    path('pos/direct-order/', views.billing_screen, name='billing_screen_direct'),
     path('api/orders/create-direct/', views.create_direct_order, name='create_direct_order'),
 ]
