@@ -1,74 +1,140 @@
 {% extends "admin/admin_dashboard.html" %}
-{% block content %}
-<div style="max-width: 1200px; margin: auto; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid var(--slate-200);">
-    
-    <!-- Top Stats Bar -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 2px solid var(--light-gray); padding-bottom: 16px;">
-        <div>
-            <h2 style="margin: 0; color: var(--dark);">📜 All Orders Log</h2>
-            <p style="margin: 4px 0 0 0; color: var(--slate-500); font-size: 0.85rem;">Complete historical breakdown of your restaurant sales</p>
-        </div>
-        <div style="text-align: right; background: var(--light-gray); padding: 12px 24px; border-radius: 12px;">
-            <span style="font-size: 0.75rem; color: var(--slate-500); font-weight: 700; text-transform: uppercase;">Gross Sales Volume</span>
-            <h2 style="margin: 4px 0 0 0; color: var(--emerald);">₹{{ grand_total|floatformat:2 }}</h2>
-        </div>
-    </div>
 
-    <!-- Data Table -->
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-            <thead>
-                <tr style="background: var(--dark); color: white;">
-                    <th style="padding: 14px; border-radius: 8px 0 0 8px;">Order ID</th>
-                    <th style="padding: 14px;">Type</th>
-                    <th style="padding: 14px;">Customer Info</th>
-                    <th style="padding: 14px;">Date & Time</th>
-                    <th style="padding: 14px;">Kitchen Status</th>
-                    <th style="padding: 14px;">Payment</th>
-                    <th style="padding: 14px; border-radius: 0 8px 8px 0; text-align: right;">Grand Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in orders %}
-                <tr style="border-bottom: 1px solid var(--slate-200); background: {% if order.is_cancelled %}#fff1f2{% else %}white{% endif %};">
-                    <td style="padding: 14px; font-weight: 700; color: var(--saffron);">#{{ order.id }}</td>
-                    <td style="padding: 14px;">
-                        {% if order.order_type == 'DINE_IN' %}
-                            🍽️ Dine In {% if order.table %}(T{{ order.table.table_number }}){% endif %}
-                        {% elif order.order_type == 'PICK_UP' %}
-                            🛍️ Pickup
-                        {% else %}
-                            🛵 Delivery
-                        {% endif %}
-                    </td>
-                    <td style="padding: 14px; color: var(--slate-500);">
-                        {% if order.customer_name %}{{ order.customer_name }}{% else %}<span style="opacity:0.4;">—</span>{% endif %}
-                    </td>
-                    <td style="padding: 14px; font-size: 0.8rem;">{{ order.created_at|date:"d M Y, h:i A" }}</td>
-                    <td style="padding: 14px;">
-                        {% if order.is_cancelled %}
-                            <span style="color: #ef4444; font-weight: 700;">❌ Cancelled</span>
-                        {% else %}
-                            <span style="font-weight: 600; color: {% if order.prep_status == 'COMPLETED' %}var(--emerald){% else %}var(--saffron){% endif %};">
-                                {{ order.get_prep_status_display }}
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td style="padding: 14px;">
-                        <span style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; 
-                            background: {% if order.payment_status == 'PAID' %}#d1fae5; color: #065f46;{% elif order.payment_status == 'PENDING' %}#fef3c7; color: #92400e;{% else %}#fee2e2; color: #991b1b;{% endif %}">
-                            {{ order.get_payment_status_display }}
-                        </span>
-                    </td>
-                    <td style="padding: 14px; text-align: right; font-weight: 700;">₹{{ order.grand_total }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" style="padding: 40px; text-align: center; color: var(--slate-500);">No orders found in database records.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+{% block content %}
+<style>
+    /* Layout & Cards */
+    .orders-container { max-width: 1600px; margin: auto; padding: 24px; background: #f8fafc; }
+    .orders-card { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .orders-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .orders-title h2 { margin: 0; font-size: 1.6rem; color: #1e293b; }
+    .orders-title p { margin: 4px 0; color: #64748b; font-size: 0.9rem; }
+    
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; background: #fff; transition: 0.2s; }
+    .total-card { border-left: 5px solid #10b981; } .dine-card { border-left: 5px solid #3b82f6; }
+    .pickup-card { border-left: 5px solid #f59e0b; } .delivery-card { border-left: 5px solid #ef4444; }
+    
+    /* Search & Filter */
+    .filter-grid { display: grid; grid-template-columns: 2fr 1fr auto; gap: 12px; margin-bottom: 24px; }
+    .search-box, .filter-select { height: 46px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0 16px; background: #fff; font-size: 14px; }
+    .filter-btn { background: #1e293b; color: #fff; border: none; border-radius: 10px; padding: 0 24px; cursor: pointer; font-weight: 600; }
+
+    /* Table Styling */
+    .table-wrapper { overflow: auto; border: 1px solid #e2e8f0; border-radius: 14px; }
+    .orders-table { width: 100%; border-collapse: collapse; }
+    .orders-table th { background: #f9fafb; padding: 16px; text-transform: uppercase; font-size: 0.7rem; color: #64748b; text-align: left; border-bottom: 2px solid #f1f5f9; }
+    .orders-table td { padding: 16px; border-top: 1px solid #f1f5f9; font-size: 0.85rem; vertical-align: middle; }
+    
+    /* Badges & Buttons */
+    .badge { display: inline-flex; padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .badge-paid { background: #ecfdf5; color: #059669; border: 1px solid #d1fae5; }
+    .badge-unpaid { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
+    .badge-pending { background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
+    .badge-cancelled { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    
+    .payment-mode-text { display: block; font-size: 8px; color: #94a3b8; margin-top: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+    .icon-btn { background: #f1f5f9; padding: 8px 12px; border-radius: 8px; text-decoration: none; color: #475569; font-size: 0.85rem; border: 1px solid #e2e8f0; }
+    .dropdown { position: relative; display: inline-block; }
+    .dots-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    .dropdown-content { display: none; position: absolute; right: 0; background-color: #fff; min-width: 120px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 1; border-radius: 8px; padding: 8px; }
+    .dropdown-content.show { display: block; }
+    .dropdown-content a { color: #333; padding: 6px; display: block; text-decoration: none; font-size: 0.8rem; }
+    .dropdown-content a:hover { background: #f8fafc; }
+
+</style>
+
+<div class="orders-container">
+    <div class="orders-card">
+        <div class="orders-header">
+            <div class="orders-title">
+                <h2>All Orders</h2>
+                <p>Monitor restaurant sales and payment status.</p>
+            </div>
+            <div class="revenue-box" style="text-align: right;">
+                <small>Total Revenue</small>
+                <h2 style="color: #10b981; margin: 0;">₹{{ stats.total_sum|default:0|floatformat:2 }}</h2>
+            </div>
+        </div>
+
+        <form method="GET">
+            <div class="filter-grid">
+                <input class="search-box" type="text" name="q" value="{{ request.GET.q }}" placeholder="Search orders...">
+                <select class="filter-select" name="date_range" onchange="this.form.submit()">
+                    <option value="today" {% if request.GET.date_range == 'today' %}selected{% endif %}>Today</option>
+                    <option value="yesterday" {% if request.GET.date_range == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                    <option value="last_7_days" {% if request.GET.date_range == 'last_7_days' %}selected{% endif %}>Last 7 Days</option>
+                    <option value="this_month" {% if request.GET.date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                    <option value="all" {% if request.GET.date_range == 'all' %}selected{% endif %}>All Time</option>
+                </select>
+                <button class="filter-btn" type="submit">Search</button>
+            </div>
+        </form>
+
+        <div class="stats-grid">
+            <div class="stat-card total-card"><small>Total Sales</small><h3>₹{{ stats.total_sum|default:0|floatformat:2 }}</h3></div>
+            <div class="stat-card dine-card"><small>Dine In</small><h3>₹{{ stats.dine_in_sum|default:0|floatformat:2 }}</h3></div>
+            <div class="stat-card pickup-card"><small>Pickup</small><h3>₹{{ stats.pickup_sum|default:0|floatformat:2 }}</h3></div>
+            <div class="stat-card delivery-card"><small>Delivery</small><h3>₹{{ stats.delivery_sum|default:0|floatformat:2 }}</h3></div>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="orders-table">
+                <thead>
+                    <tr><th>Order ID</th><th>Type</th><th>Customer</th><th>Status</th><th>Payment</th><th>Date & Time</th><th>Total</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td style="font-weight: 700; color: #2563eb;">ORD-{{ order.id }}</td>
+                        <td>{{ order.get_order_type_display }}</td>
+                        <td>{{ order.customer_name|default:"---" }}</td>
+                        <td>
+                            {% if order.is_cancelled %}
+                                <span class="badge badge-cancelled">Cancelled</span>
+                            {% else %}
+                                <span class="badge">{{ order.get_prep_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.is_cancelled %}
+                                <span class="badge badge-cancelled">Cancelled</span>
+                            {% elif order.payment_status == 'PAID' %}
+                                <span class="badge badge-paid">✓ Paid</span>
+                                {% if order.payment_mode %}
+                                    <span class="payment-mode-text">{{ order.get_payment_mode_display }}</span>
+                                {% endif %}
+                            {% elif order.payment_status == 'UNPAID' %}
+                                <span class="badge badge-unpaid">❌ Unpaid</span>
+                            {% else %}
+                                <span class="badge badge-pending">⏳ Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ order.created_at|date:"d M Y, h:i A" }}</td>
+                        <td><strong>₹{{ order.grand_total }}</strong></td>
+                        <td><a href="{% url 'view_order_bill' order.id %}" class="icon-btn" target="_blank" rel="noopener noreferrer" title="View Bill in New Tab">👁</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" style="text-align:center; padding:40px;">No orders found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+<script>
+    function toggleDropdown(id) {
+        document.getElementById("dropdown-" + id).classList.toggle("show");
+    }
+    // Close dropdown if user clicks outside
+    window.onclick = function(event) {
+        if (!event.target.matches('.dots-btn')) {
+            var dropdowns = document.getElementsByClassName("dropdown-content");
+            for (var i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].classList.remove('show');
+            }
+        }
+    }
+</script>
 {% endblock %}

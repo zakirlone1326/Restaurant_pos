@@ -49,6 +49,15 @@ class Category(models.Model):
     def __str__(self):
         return f"{self.name} ({self.restaurant.name})"
 
+class UploadedMenu(models.Model):
+    """Tracks raw menu images uploaded by admins for bulk processing"""
+    restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='uploaded_menus')
+    image = models.ImageField(upload_to='menu_scans/%Y/%m/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Menu Scan #{self.id} - {self.uploaded_at.strftime('%Y-%m-%d')}"
+
 class MenuItem(models.Model):
     restaurant = models.ForeignKey(Restaurant, on_delete=models.CASCADE, related_name='menu_items')
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
@@ -56,6 +65,15 @@ class MenuItem(models.Model):
     short_code = models.CharField(max_length=50, blank=True, null=True, help_text="Fast code for billing searches")
     description = models.TextField(blank=True)
     is_available = models.BooleanField(default=True)
+    
+    # MERGED TRACKING RELATION FIELD LINK
+    menu_file = models.ForeignKey(
+        UploadedMenu, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='extracted_items'
+    )
     
     def __str__(self):
         return f"{self.name} ({self.restaurant.name})"
@@ -147,12 +165,10 @@ class Order(models.Model):
             self.save(update_fields=['grand_total'])
 
     def save(self, *args, **kwargs):
-        # Auto-set prep status to completed if bill is marked paid or pending
         if self.payment_status in ['PAID', 'PENDING']:
             self.prep_status = 'COMPLETED'
 
         if self.table:
-            # If the order is cancelled or completed (PAID/PENDING), free the table
             if self.is_cancelled or self.prep_status == 'COMPLETED':
                 self.table.status = 'AVAILABLE'
                 self.table.save(update_fields=['status'])

@@ -17,11 +17,13 @@
         }
 
         body { 
-            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
             margin: 0; 
             background: var(--light-gray); 
             color: var(--dark);
             -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
+            font-size: 0.95rem;
         }
         
         /* --- SIDEBAR STYLES --- */
@@ -34,6 +36,7 @@
             left: 0;
             background-color: var(--dark);
             overflow-x: hidden;
+            overflow-y: auto;
             transition: 0.4s;
             padding-top: 60px;
             box-shadow: 10px 0 20px rgba(0,0,0,0.3);
@@ -46,18 +49,41 @@
             color: #cbd5e1;
             display: block;
             transition: 0.3s;
-            font-weight: 600;
+            font-weight: 500;
             background: none;
             border: none;
             width: 100%;
             text-align: left;
             cursor: pointer;
             font-family: inherit;
+            line-height: 1.4;
         }
 
         .sidebar a:hover, .sidebar button:hover {
             color: var(--saffron);
             background: rgba(255,255,255,0.05);
+        }
+
+        .logout-btn {
+            padding: 12px 32px !important;
+            text-decoration: none;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            display: block;
+            transition: 0.3s;
+            font-weight: 500;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+
+        .logout-btn:hover {
+            color: #ef4444;
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .sidebar .closebtn {
@@ -71,21 +97,22 @@
 
         .sidebar-brand {
             padding: 0 32px 30px 32px;
-            font-weight: 800;
+            font-weight: 700;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .sidebar-brand span { color: var(--saffron); }
 
         .sidebar-section {
             padding: 20px 32px 10px 32px;
-            font-size: 0.7rem;
-            font-weight: 800;
+            font-size: 0.75rem;
+            font-weight: 700;
             color: var(--saffron);
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
         }
 
         .overlay {
@@ -100,7 +127,7 @@
         }
 
         /* --- DASHBOARD STYLES --- */
-        .brand { font-weight: 800; text-transform: uppercase; letter-spacing: -0.025em; margin: 0; font-size: 1.5rem; }
+        .brand { font-weight: 700; text-transform: uppercase; letter-spacing: 0px; margin: 0; font-size: 1.3rem; line-height: 1.2; }
         .brand span { color: var(--saffron); }
 
         .header { 
@@ -127,13 +154,21 @@
             background: var(--saffron);
             color: white;
             text-decoration: none;
-            padding: 10px 20px;
+            padding: 10px 22px;
             border-radius: 8px;
-            font-weight: 700;
-            font-size: 0.75rem;
+            font-weight: 600;
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: opacity 0.2s;
+            letter-spacing: 0.8px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .header-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
         }
 
         .sales-track-card {
@@ -150,18 +185,23 @@
         .range-selector select, .range-selector input {
             border: 1px solid var(--slate-200);
             padding: 10px 14px;
-            border-radius: 12px;
+            border-radius: 10px;
             font-family: inherit;
             background: #fff;
-            font-weight: 600;
+            font-weight: 500;
             font-size: 0.9rem;
             color: var(--dark);
             outline: none;
+            transition: border-color 0.2s ease;
         }
 
-        .main-summary { text-align: center; padding: 20px 0; }
-        .main-summary h1 { font-size: 4rem; margin: 0; font-weight: 800; color: var(--dark); letter-spacing: -0.05em; }
-        .main-summary p { color: var(--slate-500); font-size: 1rem; margin-top: 4px; font-weight: 600; }
+        .range-selector select:focus, .range-selector input:focus {
+            border-color: var(--saffron);
+        }
+
+        .main-summary { text-align: center; padding: 24px 0; }
+        .main-summary h1 { font-size: 3.5rem; margin: 0; font-weight: 700; color: var(--dark); letter-spacing: -0.02em; line-height: 1.1; }
+        .main-summary p { color: var(--slate-500); font-size: 1rem; margin-top: 8px; font-weight: 500; line-height: 1.5; }
 
         /* --- CHART STYLES --- */
         .chart-container { 
@@ -235,11 +275,11 @@
 
         .leakage-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
         .leakage-box { background: var(--light-gray); padding: 16px; border-radius: 16px; border: 1px solid var(--slate-200); }
-        .leakage-box span { display: block; font-size: 0.65rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase; }
-        .leakage-box b { font-size: 1.1rem; color: var(--dark); display: block; margin-top: 4px; }
+        .leakage-box span { display: block; font-size: 0.75rem; font-weight: 600; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.5px; }
+        .leakage-box b { font-size: 1.35rem; color: var(--dark); display: block; margin-top: 8px; font-weight: 700; line-height: 1.2; }
 
-        .saffron-tag { color: var(--saffron); font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; display: block; margin-bottom: 12px; text-transform: uppercase; }
-        .item-line { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--light-gray); font-size: 0.9rem; }
+        .saffron-tag { color: var(--saffron); font-size: 0.8rem; font-weight: 700; letter-spacing: 1px; display: block; margin-bottom: 16px; text-transform: uppercase; }
+        .item-line { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--light-gray); font-size: 0.95rem; font-weight: 500; line-height: 1.4; }
 
         .category-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 8px; border-bottom: 1px solid var(--light-gray); }
         .type-info { display: flex; align-items: center; gap: 16px; }
@@ -250,19 +290,45 @@
             background: white; padding: 20px; border-radius: 20px; border-top: 5px solid var(--saffron); 
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); text-align: center;
         }
-        .card h3 { color: var(--slate-500); font-size: 0.7rem; text-transform: uppercase; margin: 0; font-weight: 700; letter-spacing: 0.05em; }
-        .card p { font-size: 1.6rem; font-weight: 800; margin: 8px 0 0 0; color: var(--dark); }
+        .card h3 { color: var(--slate-500); font-size: 0.8rem; text-transform: uppercase; margin: 0; font-weight: 600; letter-spacing: 0.7px; }
+        .card p { font-size: 2rem; font-weight: 700; margin: 12px 0 0 0; color: var(--dark); line-height: 1.2; }
 
-        .section-title { max-width: 1200px; margin: 40px auto 20px auto; padding: 0 32px; font-weight: 800; border-left: 6px solid var(--saffron); font-size: 1.3rem; }
+        /* --- HEADER & NAVIGATION --- */
+        .header-flex { display: flex; align-items: center; gap: 15px; }
+        .hamburger { font-size: 30px; cursor: pointer; color: var(--saffron); line-height: 1; }
+        .brand-small { font-size: 0.5em; opacity: 0.65; font-weight: 500; margin-left: 8px; letter-spacing: 0.5px; }
 
-        .action-grid { max-width: 1200px; margin: auto; padding: 0 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-        .btn-box { 
-            background: white; padding: 20px; border-radius: 18px; 
-            text-decoration: none; color: var(--dark); font-weight: 700; 
-            border: 1px solid var(--slate-200); display: flex; align-items: center; gap: 14px;
-            transition: all 0.2s ease; font-size: 0.9rem;
-        }
-        .btn-box:hover { border-color: var(--saffron); transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        /* --- SALES OVERVIEW --- */
+        .sales-title { font-size: 0.9rem; color: var(--dark); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1.2px; }
+        .custom-date-container { display: flex; gap: 5px; margin-top: 10px; }
+        .submit-btn { background: var(--saffron); color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; letter-spacing: 0.5px; }
+        .submit-btn:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3); }
+
+        /* --- SUMMARY SECTION --- */
+        .currency-symbol { color: var(--slate-200); font-weight: 800; font-size: 1.5rem; vertical-align: top; }
+        .orders-section { margin-top: 40px; border-top: 1px solid var(--light-gray); padding-top: 24px; }
+        .category-last { border-bottom: none; }
+
+        /* --- ORDER TYPES --- */
+        .order-label { font-weight: 700; font-size: 0.95rem; }
+        .order-avg { font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px; }
+        .order-revenue { font-weight: 700; font-size: 1.15rem; line-height: 1.2; text-align: right; }
+        .order-count { font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px; text-align: right; }
+
+        /* --- ICON BOXES --- */
+        .icon-dine { background: #fdf2f2; color: #ef4444; }
+        .icon-pickup { background: #fffbeb; color: #f59e0b; }
+        .icon-delivery { background: #f0fdf4; color: #22c55e; }
+
+        /* --- LOGOUT SEPARATOR --- */
+        .logout-separator { border-top: 1px solid rgba(255,255,255,0.1); margin-top: 20px; padding-top: 20px; }
+
+        /* --- TOP SELLING LIST --- */
+        .item-name { font-weight: 600; }
+        .item-percentage { margin-left: 12px; color: var(--dark); }
+
+        /* --- FOOTER --- */
+        .footer-text { text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
     </style>
 </head>
 <body>
@@ -272,9 +338,10 @@
     <div id="mySidebar" class="sidebar">
         <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">×</a>
         <div class="sidebar-brand">KOSHUR <span>POS</span></div>
-        
+        <div class="sidebar-section">DASHBOARD</div>
+        <a href="/admin/">📊 Dashboard</a>
+
         <div class="sidebar-section">OPERATIONS</div>
-        <!-- FIXED LINKS TO TARGET THE NEW ENDPOINTS SAFELY WITHOUT REMOVING CHARTS -->
         <a href="{% url 'live_orders' %}">🔵 Live Orders</a>
         <a href="{% url 'all_orders_view' %}">📜 All Orders</a>
         <a href="{% url 'kot_management' %}">🍳 KOT</a>
@@ -286,33 +353,39 @@
         <a href="/admin/core/pos/employee/">👥 Staff Directory</a>
         
         <div class="sidebar-section">REPORTS HUB</div>
-        <a href="/admin/analytics/" style="color: #67e8f9;">📈 Advanced Analytics</a>
+        <a href="/admin/analytics/">📈 Advanced Analytics</a>
 
         <div class="sidebar-section">SYSTEM</div>
         <a href="/admin/core/">⚙️ Admin Panel</a>
         
-        <form action="{% url 'logout' %}" method="post" id="logout-form" style="display: none;">
-            {% csrf_token %}
-        </form>
-        <button onclick="if(confirm('Logout from Koshur POS?')) document.getElementById('logout-form').submit();" style="color: #ef4444; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-            🚪 Log out
-        </button>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 20px; padding-top: 20px; padding-bottom: 80px;">
+            <form action="{% url 'logout' %}" method="post" id="logout-form" style="display: none;">
+                {% csrf_token %}
+            </form>
+            <button onclick="if(confirm('Logout from Koshur POS?')) document.getElementById('logout-form').submit();" class="logout-btn">
+                🚪 Log out
+            </button>
+        </div>
     </div>
 
     <div class="header">
         <div style="display: flex; align-items: center; gap: 15px;">
             <span style="font-size:30px; cursor:pointer; color: var(--saffron); line-height: 1;" onclick="openNav()">&#9776;</span>
-            <h1 class="brand">KOSHUR <span>POS</span> <small style="font-size: 0.45em; opacity: 0.6; font-weight: 400; margin-left: 5px;">ADMIN</small></h1>
+            <h1 class="brand">
+                KOSHUR <span>POS</span> 
+                <small style="font-size: 0.5em; opacity: 0.65; font-weight: 500; margin-left: 8px; letter-spacing: 0.5px;">
+                    {% if restaurant_name %}{{ restaurant_name }}{% else %}{{ request.user.username|upper }}{% endif %}
+                </small>
+            </h1>
         </div>
         <a href="/table/" class="header-btn">Live Floor</a>
     </div>
 
     <div class="main-content-wrapper">
-        <!-- RETAINED INHERITANCE INJECT POINT SO OPERATIONAL PAGES SCALE ON TOP -->
         {% block content %}
         <div class="sales-track-card">
             <div class="card-header">
-                <h2 style="font-size: 0.8rem; color: var(--slate-500); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1px;">Sales Overview</h2>
+                <h2 style="font-size: 0.9rem; color: var(--dark); font-weight: 700; margin: 0; text-transform: uppercase; letter-spacing: 1.2px;">Sales Overview</h2>
                 <form id="rangeForm" method="GET" class="range-selector">
                     <select name="period" id="periodSelect" onchange="toggleDateInputs()">
                         <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
@@ -324,7 +397,7 @@
                     <div id="customDateContainer" style="display: {% if period == 'custom' %}flex{% else %}none{% endif %}; gap: 5px; margin-top: 10px;">
                         <input type="date" name="start_date" value="{{ start_date }}">
                         <input type="date" name="end_date" value="{{ end_date }}">
-                        <button type="submit" style="background:var(--saffron); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">OK</button>
+                        <button type="submit" style="background:var(--saffron); color:white; border:none; padding:10px 18px; border-radius:8px; cursor:pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease; letter-spacing: 0.5px;" onmouseover="this.style.opacity='0.9'; this.style.boxShadow='0 4px 12px rgba(249, 115, 22, 0.3)'" onmouseout="this.style.opacity='1'; this.style.boxShadow='none'">OK</button>
                     </div>
                 </form>
             </div>
@@ -335,7 +408,6 @@
                 <p>{{ order_count }} Orders Completed</p>
             </div>
 
-            <!-- ALL GRAPHS AND CHART RENDERS PERFECTLY PRESERVED -->
             <div class="chart-container">
                 {% for item in graph_data %}
                     <div class="bar" 
@@ -357,13 +429,13 @@
                     <div class="type-info">
                         <div class="icon-box" style="background: #fdf2f2; color: #ef4444;">🍽️</div>
                         <div>
-                            <div style="font-weight: 700;">Dine In</div>
-                            <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ dine_in.avg|floatformat:0 }}</div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">Dine In</div>
+                            <div style="font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px;">Avg: ₹{{ dine_in.avg|floatformat:0 }}</div>
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-weight: 800; font-size: 1.1rem;">₹{{ dine_in.rev|floatformat:0 }}</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ dine_in.count }} Orders</div>
+                        <div style="font-weight: 700; font-size: 1.15rem; line-height: 1.2;">₹{{ dine_in.rev|floatformat:0 }}</div>
+                        <div style="font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px;">{{ dine_in.count }} Orders</div>
                     </div>
                 </div>
 
@@ -371,13 +443,13 @@
                     <div class="type-info">
                         <div class="icon-box" style="background: #fffbeb; color: #f59e0b;">🛍️</div>
                         <div>
-                            <div style="font-weight: 700;">Pick Up</div>
-                            <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ pickup.avg|floatformat:0 }}</div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">Pick Up</div>
+                            <div style="font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px;">Avg: ₹{{ pickup.avg|floatformat:0 }}</div>
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-weight: 800; font-size: 1.1rem;">₹{{ pickup.rev|floatformat:0 }}</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ pickup.count }} Orders</div>
+                        <div style="font-weight: 700; font-size: 1.15rem; line-height: 1.2;">₹{{ pickup.rev|floatformat:0 }}</div>
+                        <div style="font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px;">{{ pickup.count }} Orders</div>
                     </div>
                 </div>
 
@@ -385,13 +457,13 @@
                     <div class="type-info">
                         <div class="icon-box" style="background: #f0fdf4; color: #22c55e;">🛵</div>
                         <div>
-                            <div style="font-weight: 700;">Delivery</div>
-                            <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">Avg: ₹{{ delivery.avg|floatformat:0 }}</div>
+                            <div style="font-weight: 700; font-size: 0.95rem;">Delivery</div>
+                            <div style="font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px;">Avg: ₹{{ delivery.avg|floatformat:0 }}</div>
                         </div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-weight: 800; font-size: 1.1rem;">₹{{ delivery.rev|floatformat:0 }}</div>
-                        <div style="font-size: 0.75rem; color: var(--slate-500); font-weight: 600;">{{ delivery.count }} Orders</div>
+                        <div style="font-weight: 700; font-size: 1.15rem; line-height: 1.2;">₹{{ delivery.rev|floatformat:0 }}</div>
+                        <div style="font-size: 0.8rem; color: var(--slate-500); font-weight: 500; margin-top: 2px;">{{ delivery.count }} Orders</div>
                     </div>
                 </div>
             </div>
@@ -406,9 +478,9 @@
                 <h3>STAFF ACTIVE</h3>
                 <p>{{ staff_present }}</p>
             </div>
-            <div class="card" style="border-top-color: var(--emerald);">
-                <h3 style="color: var(--slate-500);">ESTIMATED PROFIT</h3>
-                <p style="color: var(--emerald);">₹{{ profit|floatformat:0 }}</p>
+            <div class="card">
+                <h3>TOTAL EXPENSES</h3>
+                <p>₹{{ total_expenses|floatformat:0 }}</p>
             </div>
         </div>
 
@@ -441,19 +513,9 @@
                 <span>{{ item.pct|floatformat:1 }}% <b style="margin-left:12px; color: var(--dark);">₹{{ item.item_rev|floatformat:0 }}</b></span>
             </div>
             {% endfor %}
-
-            <div style="margin-top: 32px;"></div>
-
-            <span class="saffron-tag">↓ Low Selling (Quantity Wise)</span>
-            {% for item in low_qty %}
-            <div class="item-line">
-                <span style="font-weight: 600; color: var(--slate-500);">{{ item.menu_variant__menu_item__name }}</span>
-                <span style="font-weight: 800;">{{ item.total_qty }} <small>Qty</small></span>
-            </div>
-            {% endfor %}
         </div>
 
-        <div style="text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
+        <div style="text-align: center; margin: 60px 0; color: var(--slate-500); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;">
             POWERED BY KOSHUR POS • 2026
         </div>
         {% endblock %}

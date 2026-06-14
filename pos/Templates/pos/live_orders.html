@@ -1,54 +1,94 @@
 {% extends "admin/admin_dashboard.html" %}
+
 {% block content %}
-<div style="display: flex; gap: 24px; max-width: 1200px; margin: auto;">
+<style>
+    .live-container { max-width: 1600px; margin: auto; padding: 24px; background: #f8fafc; font-family: 'Inter', sans-serif; }
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .tab-btn { padding: 10px 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; transition: 0.2s; font-weight: 500; }
+    .tab-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+    
+    .view-section { display: none; }
+    .view-section.active { display: block; }
 
-    <!-- Left Main Container: Running Orders Summary Block -->
-    <div style="flex: 1; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid var(--slate-200);">
-        <h3 style="margin-top: 0; color: var(--saffron);">🔵 Running Orders</h3>
-        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
-            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
-                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Order</span>
-                <h1 style="margin: 8px 0 0 0; font-size: 2rem;">{{ running_orders_count }}</h1>
-            </div>
-            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
-                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Amount</span>
-                <h1 style="margin: 8px 0 0 0; font-size: 2rem; color: var(--dark);">₹{{ running_orders_amount }}</h1>
-            </div>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
-            <span>🍽️ Dine in</span><strong>₹{{ dine_in_amount }}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
-            <span>🛍️ Pick up</span><strong>₹{{ pickup_amount }}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 16px;">
-            <span>🛵 Delivery</span><strong>₹{{ delivery_amount }}</strong>
-        </div>
+    /* Card Styling */
+    .orders-card { background: #fff; border-radius: 16px; padding: 24px; border: 1px solid #e2e8f0; max-width: 900px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    
+    /* Stats Grid */
+    .stats-header { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .stat-box { background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid #f1f5f9; }
+    .stat-label { font-size: 0.85rem; color: #64748b; margin-bottom: 8px; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+
+    /* List Items */
+    .list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f1f5f9; }
+    .list-item:last-child { border-bottom: none; }
+    .item-label { display: flex; align-items: center; gap: 12px; font-weight: 500; color: #334155; }
+    .item-price { font-weight: 600; color: #0f172a; }
+</style>
+
+<div class="live-container">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showSection('orders', this)">Running Orders</button>
+        <button class="tab-btn" onclick="showSection('tables', this)">Running Tables</button>
     </div>
 
-    <!-- Right Main Container: Pending Kitchen Pipelines Summary Block -->
-    <div style="flex: 1; background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid var(--slate-200);">
-        <h3 style="margin-top: 0; color: #3b82f6;">🔵 Pending Orders</h3>
-        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
-            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
-                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Orders</span>
-                <h1 style="margin: 8px 0 0 0; font-size: 2rem;">{{ pending_orders_count }}</h1>
-            </div>
-            <div style="flex: 1; background: var(--light-gray); padding: 16px; border-radius: 12px; text-align: center;">
-                <span style="font-size: 0.8rem; color: var(--slate-500); font-weight: 600;">Total Amount</span>
-                <h1 style="margin: 8px 0 0 0; font-size: 2rem;">₹{{ pending_orders_amount }}</h1>
-            </div>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
-            <span>🍳 In Preparation</span><strong>₹{{ in_prep_amount }}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--light-gray);">
-            <span>📦 Waiting For Pickup</span><strong>₹{{ waiting_pickup_amount }}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 16px;">
-            <span>🛵 Out For Delivery</span><strong>₹{{ out_delivery_amount }}</strong>
-        </div>
+    <div id="orders-view" class="view-section active">
+        <div class="orders-card">
+            <div class="card-title">🔵 Running Orders</div>
+            
+            <div class="stats-header">
+    <div class="stat-box">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value">{{ total_orders|default:0 }}</div>
     </div>
-
+    <div class="stat-box">
+        <div class="stat-label">Total Amount</div>
+        <div class="stat-value">₹{{ total_amount|default:0|floatformat:2 }}</div>
+    </div>
 </div>
+
+            <div class="list-item">
+                <div class="item-label"><span>🍴</span> Dine in</div>
+                <div class="item-price">₹{{ dine_in_amount|default:0|floatformat:2 }}</div>
+            </div>
+            <div class="list-item">
+                <div class="item-label"><span>🛍</span> Pick up</div>
+                <div class="item-price">₹{{ pickup_amount|default:0|floatformat:2 }}</div>
+            </div>
+            <div class="list-item">
+                <div class="item-label"><span>🛵</span> Delivery</div>
+                <div class="item-price">₹{{ delivery_amount|default:0|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tables-view" class="view-section">
+        <div class="orders-card">
+            <div class="card-title">🔵 Running Tables</div>
+            {% for table in tables %}
+                <div class="list-item">
+                    <span style="font-weight: 600;">Table {{ table.table_number }}</span>
+                    <span style="color: #ef4444; font-weight: 600;">₹{{ table.active_order.grand_total|default:0|floatformat:2 }}</span>
+                </div>
+            {% empty %}
+                <div style="text-align: center; padding: 40px; color: #94a3b8;">
+                    <span style="font-size: 2rem; display: block; margin-bottom: 10px;">🪑</span>
+                    <p>No active tables currently.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function showSection(section, btnElement) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+        document.getElementById('orders-view').style.display = (section === 'orders') ? 'block' : 'none';
+        document.getElementById('tables-view').style.display = (section === 'tables') ? 'block' : 'none';
+    }
+</script>
 {% endblock %}

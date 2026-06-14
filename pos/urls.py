@@ -12,6 +12,9 @@ urlpatterns = [
     path('live-orders/', views.live_orders, name='live_orders'),
     path('all-orders/', views.all_orders_view, name='all_orders_view'),
     path('kot/', views.kot_management, name='kot_management'),
+    path('settle-order/<int:order_id>/', views.settle_order_view, name='settle_order_url'),
+    path(
+    'order-bill/<int:order_id>/',views.view_order_bill,name='view_order_bill'),
     
     # 🍴 ADVANCED MENU ROUTING SCHEME (Multi-step Layout Stage Integration)
     path('menu/', views.menu_hub, name='menu_management'),
@@ -53,4 +56,7 @@ urlpatterns = [
     # 🛵 DIRECT & TABLE-FREE BILLING DISPATCH
     path('pos/direct-order/', views.billing_screen, name='billing_screen_direct'),
     path('api/orders/create-direct/', views.create_direct_order, name='create_direct_order'),
+
+    path('upload-menu-image-async/', views.upload_menu_image_async, name='upload_menu_image_async'),
+    path('delete-menu-batch/<int:file_id>/', views.delete_uploaded_menu_batch, name='delete_menu_batch'),
 ]

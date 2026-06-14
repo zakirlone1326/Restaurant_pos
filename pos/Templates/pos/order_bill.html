@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Invoice #{{ order.id }}</title>
+
+<style>
+body{
+    font-family:monospace;
+    max-width:420px;
+    margin:auto;
+    padding:12px;
+}
+
+.center{text-align:center}
+
+.line{
+    border-top:1px dashed #000;
+    margin:12px 0;
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    margin:4px 0;
+}
+
+.total{
+    font-size:28px;
+    font-weight:bold;
+}
+
+.badge{
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:12px;
+}
+
+.paid{
+    background:#0ce056;
+}
+
+.unpaid{
+    background:#e9ed09;
+}
+
+.cancelled{
+    background:#ff0000;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="center">
+
+<h1>{{ restaurant.name }}</h1>
+
+<p>
+{{ restaurant.address }}<br>
+Ph: {{ restaurant.phone }}
+</p>
+
+</div>
+
+<div class="line"></div>
+
+<h2>
+{% if order.table %}
+TABLE: {{ order.table.table_number }}
+{% else %}
+{{ order.get_order_type_display }}
+{% endif %}
+|
+Bill #{{ order.id }}
+</h2>
+
+<p>
+Date:
+{{ order.created_at|date:"d/m/Y H:i" }}
+</p>
+
+<div class="line"></div>
+
+<div class="row">
+<strong>Item</strong>
+<strong>Price</strong>
+</div>
+
+{% for item in order.items.all %}
+
+<div class="row">
+<span>
+{{ item.quantity }}x
+{{ item.menu_variant.menu_item.name }}
+</span>
+
+<span>
+₹{{ item.total_price }}
+</span>
+</div>
+
+{% endfor %}
+
+<div class="line"></div>
+
+<div class="row">
+<span>Subtotal</span>
+<span>₹{{ order.grand_total }}</span>
+</div>
+
+{% if order.discount_value > 0 %}
+<div class="row">
+<span>Discount</span>
+<span>-₹{{ order.discount_value }}</span>
+</div>
+{% endif %}
+
+<div class="line"></div>
+
+<div class="row total">
+<span>Total</span>
+<span>₹{{ order.grand_total }}</span>
+</div>
+
+<br>
+
+{% if order.is_cancelled %}
+
+<span class="badge cancelled">
+CANCELLED
+</span>
+
+{% elif order.payment_status == 'PAID' %}
+
+<span class="badge paid">
+PAID
+</span>
+
+{% else %}
+
+<span class="badge unpaid">
+{{ order.get_payment_status_display }}
+</span>
+
+{% endif %}
+
+<div class="line"></div>
+
+<div class="center">
+<h3>THANK YOU FOR YOUR ORDER!</h3>
+Koshur POS System
+</div>
+
+</body>
+</html>

@@ -7,17 +7,22 @@ from django.db import transaction
 from django.db.models import Sum, F, DecimalField, Q, Avg, Count
 from django.utils import timezone
 from datetime import timedelta, datetime
+from decimal import Decimal
+from django.conf import settings
 import re
 import random
+import json
+import requests
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
 from .models import (
     Table, Order, Restaurant, MenuItem, MenuVariant, 
     OrderItem, Category, Expense, ExpenseCategory,
-    Employee, Attendance, SalaryPayment
+    Employee, Attendance, SalaryPayment, UploadedMenu
 )
 from .utils import send_staff_notification
 
@@ -275,8 +280,8 @@ def kashur_admin_dashboard(request):
         qs = orders_qs.filter(order_type=otype)
         rev = qs.aggregate(total=Sum('grand_total'))['total'] or 0
         count = qs.count()
-        avg = float(rev) / count if count > 0 else 0
-        return {'rev': float(rev), 'count': count, 'avg': avg}
+        type_avg = float(rev) / count if count > 0 else 0
+        return {'rev': float(rev), 'count': count, 'avg': type_avg}
 
     context = {
         'active_view': active_view,
@@ -287,6 +292,7 @@ def kashur_admin_dashboard(request):
         'display_date': display_date, 
         'revenue': float(revenue),
         'expenses': float(expenses),
+        'total_expenses': float(expenses),
         'profit': float(revenue) - float(expenses),
         'order_count': order_count,
         'aov': aov,
@@ -318,32 +324,67 @@ def live_orders(request):
     running_qs = active_orders.filter(payment_status='UNPAID')
     running_totals = running_qs.aggregate(c=Count('id'), s=Sum('grand_total'))
     
-    pending_qs = active_orders.exclude(prep_status='COMPLETED')
-    pending_totals = pending_qs.aggregate(c=Count('id'), s=Sum('grand_total'))
+    total_orders = running_totals['c'] or 0
+    total_amount = float(running_totals['s'] or 0.00)
 
     context = {
-        'running_count': running_totals['c'] or 0,
-        'running_amount': float(running_totals['s'] or 0.00),
+        'total_orders': total_orders,
+        'total_amount': total_amount,
         'dine_in_amount': float(running_qs.filter(order_type='DINE_IN').aggregate(s=Sum('grand_total'))['s'] or 0.00),
         'pickup_amount': float(running_qs.filter(order_type='PICK_UP').aggregate(s=Sum('grand_total'))['s'] or 0.00),
         'delivery_amount': float(running_qs.filter(order_type='DELIVERY').aggregate(s=Sum('grand_total'))['s'] or 0.00),
-
-        'pending_count': pending_totals['c'] or 0,
-        'pending_amount': float(pending_totals['s'] or 0.00),
-        'prep_amount': float(pending_qs.filter(prep_status='IN_PREPARATION').aggregate(s=Sum('grand_total'))['s'] or 0.00),
-        'waiting_amount': float(pending_qs.filter(prep_status='WAITING_FOR_PICKUP').aggregate(s=Sum('grand_total'))['s'] or 0.00),
-        'out_amount': float(pending_qs.filter(prep_status='OUT_FOR_DELIVERY').aggregate(s=Sum('grand_total'))['s'] or 0.00),
+        'tables': Table.objects.all().order_by('table_number'),
     }
+    
+    for table in context['tables']:
+        table.active_order = table.orders.filter(is_settled=False, is_cancelled=False).first()
+        table.is_occupied = table.active_order is not None
+        table.status = "Occupied" if table.is_occupied else "Available"
+
     return render(request, 'pos/live_orders.html', context)
 
 
 def all_orders_view(request):
-    """Historical data table view with net analytics layout"""
-    orders_list = Order.objects.all().order_by('-created_at')
-    grand_total_history = orders_list.filter(is_cancelled=False).aggregate(s=Sum('grand_total'))['s'] or 0.00
+    orders = Order.objects.all().order_by('-created_at')
+
+    query = request.GET.get('q')
+    if query:
+        orders = orders.filter(
+            Q(id__icontains=query) | 
+            Q(customer_name__icontains=query) | 
+            Q(customer_phone__icontains=query) |
+            Q(delivery_address__icontains=query)
+        )
+
+    date_filter = request.GET.get('date_range', 'all')
+    now = timezone.now()
+    if date_filter == 'today':
+        orders = orders.filter(created_at__date=now.date())
+    elif date_filter == 'yesterday':
+        orders = orders.filter(created_at__date=(now - timedelta(days=1)).date())
+    elif date_filter == 'last_7_days':
+        orders = orders.filter(created_at__gte=now - timedelta(days=7))
+    elif date_filter == 'this_month':
+        orders = orders.filter(created_at__month=now.month, created_at__year=now.year)
+    elif date_filter == 'last_month':
+        last_month = (now.replace(day=1) - timedelta(days=1))
+        orders = orders.filter(created_at__month=last_month.month, created_at__year=last_month.year)
+
+    stats = orders.filter(is_cancelled=False).aggregate(
+        total_sum=Sum('grand_total'),
+        total_count=Count('id'),
+        dine_in_sum=Sum('grand_total', filter=Q(order_type='DINE_IN')),
+        dine_in_count=Count('id', filter=Q(order_type='DINE_IN')),
+        pickup_sum=Sum('grand_total', filter=Q(order_type='PICK_UP')),
+        pickup_count=Count('id', filter=Q(order_type='PICK_UP')),
+        delivery_sum=Sum('grand_total', filter=Q(order_type='DELIVERY')),
+        delivery_count=Count('id', filter=Q(order_type='DELIVERY')),
+    )
+
     return render(request, 'pos/all_orders.html', {
-        'orders': orders_list, 
-        'grand_total': float(grand_total_history)
+        'orders': orders,
+        'stats': stats,
+        'grand_total': stats['total_sum'] or 0.00
     })
 
 
@@ -352,42 +393,54 @@ def kot_management(request):
     active_kots = Order.objects.exclude(prep_status='COMPLETED').order_by('-created_at')
     return render(request, 'pos/kot_list.html', {'kots': active_kots})
 
-
 def menu_hub(request):
     """Advanced Multi-Stage Menu Tab Routing Processor Matrix"""
     if not request.user.is_authenticated:
         return redirect('login')
 
+    current_restaurant = getattr(request.user, 'restaurant', None) or Restaurant.objects.first()
     stage = request.GET.get('stage', '1')
     tab = request.GET.get('tab', 'items')
 
-    categories = Category.objects.all().prefetch_related('items__variants')
-    items = MenuItem.objects.all().order_by('category__name', 'name')
+    # Prefetch data scoped securely to prevent resource leakage
+    categories = Category.objects.filter(restaurant=current_restaurant).prefetch_related('items__variants')
+    items = MenuItem.objects.filter(restaurant=current_restaurant).order_by('category__name', 'name')
+    uploaded_menus = UploadedMenu.objects.filter(restaurant=current_restaurant).order_by('-uploaded_at')
 
     context = {
         'stage': stage,
         'tab': tab,
         'categories': categories,
         'items': items,
-        'restaurant_name': Restaurant.objects.first().name if Restaurant.objects.exists() else "KOSHUR POS",
+        # 🟢 CHANGED: Dual-mapping keys so it matches 'uploaded_history' on your page layout perfectly!
+        'uploaded_menus': uploaded_menus,
+        'uploaded_history': uploaded_menus, 
+        'restaurant_name': current_restaurant.name if current_restaurant else "KOSHUR POS",
     }
     return render(request, 'pos/menu_management.html', context)
 
 
 def menu_all_in_one(request):
     """Sub-catalog layout matrix screen segmenter"""
+    if not request.user.is_authenticated:
+        return redirect('login')
     return render(request, 'pos/pos_screen.html')
 
 
 def menu_item_list(request):
     """Comprehensive catalog search control sheet with shortcodes"""
-    categories = Category.objects.all().prefetch_related('items__variants')
-    items = MenuItem.objects.all().order_by('category__name', 'name')
+    if not request.user.is_authenticated:
+        return redirect('login')
+        
+    current_restaurant = getattr(request.user, 'restaurant', None) or Restaurant.objects.first()
+    categories = Category.objects.filter(restaurant=current_restaurant).prefetch_related('items__variants')
+    items = MenuItem.objects.filter(restaurant=current_restaurant).order_by('category__name', 'name')
+    
     return render(request, 'pos/menu_management.html', {
         'categories': categories, 
-        'items': items
+        'items': items,
+        'stage': '4' # Forces fallback tab display state
     })
-
 
 # ==========================================
 # 🏠 FRONTEND - TABLE FLOOR PLAN
@@ -401,7 +454,6 @@ def table_dashboard(request):
     tables = Table.objects.all().order_by(Length('table_number').asc(), 'table_number')
     
     for table in tables:
-        # We explicitly exclude both 'PAID' and 'PENDING' so the table shows as free
         active_order = table.orders.filter(is_cancelled=False).exclude(
             Q(payment_status='PAID') | Q(payment_status='PENDING')
         ).first()
@@ -440,44 +492,50 @@ def start_order(request, table_id):
 def create_direct_order(request):
     """Instantly creates table-free Walk-in, Pickup, or Delivery orders from dashboard"""
     try:
-        # 1. Fetch the restaurant
         restaurant = Restaurant.objects.first()
         if not restaurant:
             return JsonResponse({'success': False, 'error': 'No restaurant configured'}, status=500)
 
         order_type = request.POST.get('order_type', 'DINE_IN').upper()
-        
-        # 2. Include 'restaurant=restaurant' in the creation
+        if order_type not in ['DINE_IN', 'PICK_UP', 'DELIVERY']:
+            order_type = 'DINE_IN'
+
+        customer_name = request.POST.get('customer_name', '').strip()
+        customer_phone = request.POST.get('customer_phone', '').strip()
+        delivery_address = request.POST.get('delivery_address', '').strip()
+
+        if order_type == 'DELIVERY' and (not customer_name or not customer_phone or not delivery_address):
+            return JsonResponse({'success': False, 'error': 'Customer name, phone, and delivery address are required for delivery'}, status=400)
+
         order = Order.objects.create(
-            order_type=order_type, 
-            payment_status='UNPAID', 
+            order_type=order_type,
+            payment_status='UNPAID',
             table=None,
-            restaurant=restaurant  # <--- THIS IS THE FIX
+            restaurant=restaurant
         )
-        
-        if order_type in ['DELIVERY', 'PICK_UP']:
-            order.customer_name = request.POST.get('customer_name', '').strip()
-            order.customer_phone = request.POST.get('customer_phone', '').strip()
-            
-            if order_type == 'DELIVERY':
-                order.delivery_address = request.POST.get('delivery_address', '').strip()
-                
+
+        if customer_name:
+            order.customer_name = customer_name
+        if customer_phone:
+            order.customer_phone = customer_phone
+        if order_type == 'DELIVERY':
+            order.delivery_address = delivery_address
+
+        if customer_name or customer_phone or order.delivery_address:
             order.save()
-            
+
         return JsonResponse({'success': True, 'order_id': order.id})
     except Exception as e:
-        print("ERROR CREATING ORDER:", str(e)) # Helps see the error in terminal
+        print("ERROR CREATING ORDER:", str(e))
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 
 def billing_screen(request, table_id=None):
     """
     Renders the POS screen using Server-Side Rendering.
     Data is pre-fetched and passed directly to the template.
     """
-    # prefetch_related('items__variants') follows the 'items' related_name
-    # and then grabs all variants for every item in one efficient query.
     categories = Category.objects.prefetch_related('items__variants').all()
-    
     restaurant_name = Restaurant.objects.first().name if Restaurant.objects.exists() else "KOSHUR POS"
     
     context = {
@@ -487,7 +545,6 @@ def billing_screen(request, table_id=None):
         'direct_order': None
     }
     
-    # Handle routing for Table or Direct Orders
     if table_id and str(table_id) != '0':
         context['table'] = get_object_or_404(Table, id=table_id)
     else:
@@ -510,10 +567,8 @@ def add_item_to_order(request):
         if not variant_id:
             return JsonResponse({'error': 'Variant ID missing'}, status=400)
 
-        # 1. Get Variant
         variant = get_object_or_404(MenuVariant, id=variant_id)
         
-        # 2. Get/Create Active Order
         active_order = None
         if order_id:
             active_order = get_object_or_404(Order, id=order_id, is_cancelled=False)
@@ -527,12 +582,11 @@ def add_item_to_order(request):
                     payment_status='UNPAID', 
                     order_type='DINE_IN'
                 )
+                
         
         if not active_order:
             return JsonResponse({'error': 'No active order context found'}, status=400)
 
-        # 3. Get or Create OrderItem
-        # REMOVED: 'name' and 'price' from defaults as they don't exist in the model
         order_item, created = OrderItem.objects.get_or_create(
             order=active_order, 
             menu_variant=variant, 
@@ -544,14 +598,12 @@ def add_item_to_order(request):
             order_item.quantity += 1
             order_item.save()
         
-        # 4. Finalize
         active_order.update_totals(save=True)
-        
         return JsonResponse({'success': True, 'total': float(active_order.grand_total)})
         
     except Exception as e:
         import traceback
-        traceback.print_exc() # This will print the error in your terminal
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -575,23 +627,17 @@ def delete_item(request):
 
 def _get_active_order(table_id, request):
     if table_id and str(table_id) != '0' and str(table_id) != 'None':
-
         table = get_object_or_404(Table, id=table_id)
-
         order = table.orders.filter(
             is_cancelled=False
         ).exclude(
             payment_status='PAID'
         ).order_by('-id').first()
-
         return order, table
-
     else:
         order_id = request.GET.get('order_id') or request.POST.get('order_id')
-
         if order_id:
             return get_object_or_404(Order, id=order_id), None
-
         return None, None
 
 
@@ -643,7 +689,6 @@ def toggle_gst(request, table_id):
     return JsonResponse({'error': 'Order not found'}, status=400)
 
 
-
 @csrf_exempt
 @require_http_methods(["POST"])
 @transaction.atomic
@@ -659,9 +704,6 @@ def settle_order(request, table_id):
 
         order.payment_mode = payment_mode
         order.payment_status = target_status
-        
-        # FIX: Even if Pending, we set is_settled=True to remove it from the cart.
-        # Your admin reports can still find this order by filtering: Order.objects.filter(payment_status='PENDING')
         order.is_settled = True 
         order.save()
         
@@ -671,6 +713,7 @@ def settle_order(request, table_id):
             
         return JsonResponse({'success': True, 'status': target_status})
     return JsonResponse({'error': 'Order not found'}, status=400)
+
 
 # ==========================================
 # 👥 STAFF & ATTENDANCE SERVICE MODULES
@@ -774,8 +817,8 @@ def admin_analytics(request):
         'days': days, 
         'revenue_data': revenue_data, 
         'expense_data': expense_data, 
-        'top_labels': [i['menu_variant__menu_item__name'] for i in top_qs], 
-        'top_values': [i['total_qty'] for i in top_qs], 
+        'top_labels': [item['menu_variant__menu_item__name'] for item in top_qs], 
+        'top_values': [item['total_qty'] for item in top_qs], 
         'total_revenue': sum(revenue_data), 
         'total_expenses': sum(expense_data), 
         'net_profit': sum(revenue_data) - sum(expense_data), 
@@ -787,7 +830,6 @@ def admin_analytics(request):
 
 
 def get_order_status(request, table_id):
-
     order, _ = _get_active_order(table_id, request)
 
     if not order:
@@ -796,7 +838,6 @@ def get_order_status(request, table_id):
         })
 
     items_list = []
-
     active_items = order.items.filter(
         is_cancelled=False
     ).order_by('id')
@@ -821,6 +862,7 @@ def get_order_status(request, table_id):
         'grand_total': float(order.grand_total)
     })
 
+
 def print_invoice(request, table_id):
     order, _ = _get_active_order(table_id, request)
     
@@ -835,6 +877,7 @@ def print_invoice(request, table_id):
         'order': order, 
         'restaurant': Restaurant.objects.first()
     })
+
 
 def print_kot(request, table_id):
     order, _ = _get_active_order(table_id, request)
@@ -855,11 +898,9 @@ def print_kot(request, table_id):
     })
 
 
-
 # ==========================================
 # 🧱 INTERNAL INVENTORY CONTROL HANDLERS
 # ==========================================
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def toggle_item_status(request):
@@ -883,7 +924,7 @@ def update_item_price(request):
         variant.price = new_price
         variant.save()
         return JsonResponse({'success': True})
-    return JsonResponse({'success': False, 'error': 'No default variant variant found'})
+    return JsonResponse({'success': False, 'error': 'No default variant found'})
 
 
 @csrf_exempt
@@ -925,3 +966,240 @@ def update_order_type(request):
         active_order.save()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'No active order found'}, status=400)
+
+
+def all_orders(request):
+    orders = Order.objects.all().order_by('-created_at')
+
+    query = request.GET.get('q')
+    if query:
+        orders = orders.filter(
+            Q(id__icontains=query) | 
+            Q(customer_name__icontains=query) | 
+            Q(customer_phone__icontains=query)
+        )
+
+    date_filter = request.GET.get('date_range')
+    today = timezone.now().date()
+    if date_filter == 'today':
+        orders = orders.filter(created_at__date=today)
+    elif date_filter == 'yesterday':
+        orders = orders.filter(created_at__date=today - timedelta(days=1))
+    elif date_filter == 'last_7_days':
+        orders = orders.filter(created_at__date__gte=today - timedelta(days=7))
+
+    stats = orders.aggregate(
+        total_sum=Sum('grand_total'),
+        total_count=Count('id'),
+        dine_in_sum=Sum('grand_total', filter=Q(order_type='DINE_IN')),
+        dine_in_count=Count('id', filter=Q(order_type='DINE_IN')),
+        pickup_sum=Sum('grand_total', filter=Q(order_type='PICK_UP')),
+        pickup_count=Count('id', filter=Q(order_type='PICK_UP')),
+        delivery_sum=Sum('grand_total', filter=Q(order_type='DELIVERY')),
+        delivery_count=Count('id', filter=Q(order_type='DELIVERY')),
+    )
+
+    return render(request, 'pos/all_orders.html', {'orders': orders, 'stats': stats})
+
+
+def settle_order_view(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    order.payment_status = 'PAID'
+    order.is_settled = True
+    order.save()
+    return redirect('all_orders_view')
+
+
+def view_order_bill(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    return render(
+        request,
+        'pos/order_bill.html',
+        {
+            'order': order,
+            'restaurant': Restaurant.objects.first()
+        }
+    )
+
+
+import json
+import os
+from django.http import JsonResponse
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from .models import MenuItem, MenuVariant, Category, Restaurant, UploadedMenu
+
+# ==========================================
+# 📤 ASYNC BROWSER OCR UPLOAD INGESTION HUB
+# ==========================================
+@login_required
+@require_http_methods(["POST"])
+def upload_menu_image_async(request):
+    """
+    Accepts pre-parsed item arrays directly from the browser's Tesseract.js engine,
+    storing raw image assets and filling the PostgreSQL database.
+    """
+    if not request.FILES.get('image_file'):
+        return JsonResponse({'success': False, 'error': 'No menu document asset detected.'})
+        
+    image_file = request.FILES['image_file']
+    raw_menu_data = request.POST.get('menu_data')
+    
+    try:
+        # 1. Multi-tenant restaurant fallback lookup
+        current_restaurant = getattr(request.user, 'restaurant', Restaurant.objects.first())
+        if not current_restaurant:
+            return JsonResponse({'success': False, 'error': "Configure a Restaurant profile in Admin first."})
+
+        # 2. Log image file permanently for asset history/wiping records
+        menu_record = UploadedMenu.objects.create(
+            restaurant=current_restaurant,
+            image=image_file
+        )
+
+        if not raw_menu_data:
+            menu_record.delete()
+            return JsonResponse({'success': False, 'error': 'No parsed list payload sent from browser.'})
+
+        parsed_items = json.loads(raw_menu_data)
+        
+        # 3. Handle tracking target category folder creation
+        default_category, _ = Category.objects.get_or_create(
+            name="Scanned Menu Items",
+            restaurant=current_restaurant
+        )
+        
+        items_saved = 0
+
+        # 4. Save elements directly into database rows
+        for item in parsed_items:
+            name = item.get("name", "").strip()
+            price = item.get("price", 0)
+            
+            if len(name) < 2 or price <= 0:
+                continue
+                
+            # Truncate string sizes to safeguard varchar(200) boundaries
+            if len(name) > 190:
+                name = name[:190].strip()
+
+            # Create clean item database profiles linked to the layout tracking file
+            menu_item, created = MenuItem.objects.get_or_create(
+                name=name,
+                restaurant=current_restaurant,
+                defaults={
+                    'category': default_category, 
+                    'is_available': True,
+                    'menu_file': menu_record
+                }
+            )
+            
+            if not created and not menu_item.menu_file:
+                menu_item.menu_file = menu_record
+                menu_item.save(update_fields=['menu_file'])
+
+            # Map regular price variation lines
+            MenuVariant.objects.get_or_create(
+                menu_item=menu_item,
+                size_name="Regular",
+                defaults={'price': price}
+            )
+            
+            if created:
+                items_saved += 1
+
+        return JsonResponse({
+            'success': True,
+            'item_name': f"Extracted {items_saved} items successfully!",
+            'menu_file_id': menu_record.id
+        })
+
+    except Exception as e:
+        if 'menu_record' in locals():
+            menu_record.delete()
+        return JsonResponse({'success': False, 'error': f"Database mapping error: {str(e)}"})
+
+
+# ==========================================
+# 🗑️ ASYNC BROWSER BATCH WIPE CONTROLLER
+# ==========================================
+@login_required
+@require_http_methods(["POST"])
+def delete_uploaded_menu_batch(request, file_id):
+    """
+    Safely purges raw uploaded images from media storage and removes 
+    the faulty extracted menu items without destroying historical order tracking.
+    """
+    try:
+        # 1. Fetch the exact batch instance context safely
+        uploaded_menu = get_object_or_404(UploadedMenu, id=file_id)
+        
+        # 2. Grab all menu items extracted specifically from this single upload session
+        items_to_clear = MenuItem.objects.filter(menu_file=uploaded_menu)
+        
+        # 3. Check for protected historical data relations (Order history safeguard)
+        from .models import OrderItem
+        has_active_sales = OrderItem.objects.filter(menu_variant__menu_item__in=items_to_clear).exists()
+        
+        if has_active_sales:
+            return JsonResponse({
+                'success': False, 
+                'error': "Cannot delete this batch. Customers have already ordered some items from this scan sheet!"
+            })
+
+        # 4. Wipe the physical file from your local machine storage path securely
+        if uploaded_menu.image:
+            image_path = uploaded_menu.image.path
+            if os.path.exists(image_path):
+                os.remove(image_path)
+
+        # 5. Drop rows from database (Triggers cascade cleanup on variants, leaving OrderItem pristine)
+        uploaded_menu.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': "Batch file and items safely cleared out of your system inventory maps."
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f"Batch clear execution aborted: {str(e)}"})
+    
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_uploaded_menu_batch(request, file_id):
+    """
+    Safely purges the raw uploaded image from storage and completely deletes
+    all corresponding menu items extracted during that specific scan session.
+    """
+    try:
+        # 1. Fetch the exact batch instance context safely
+        uploaded_menu = get_object_or_404(UploadedMenu, id=file_id)
+        
+        # 2. Grab all menu entries linked explicitly to this file session
+        items_to_wipe = MenuItem.objects.filter(menu_file=uploaded_menu)
+        items_count = items_to_wipe.count()
+        
+        # 3. 🟢 THE FIX: Delete the items entirely from the database instead of unlinking them
+        # (Django's database cascade handles removing variants automatically)
+        items_to_wipe.delete()
+
+        # 4. Wipe the physical file from your local Windows machine drive storage path securely
+        if uploaded_menu.image:
+            image_path = uploaded_menu.image.path
+            if os.path.exists(image_path):
+                os.remove(image_path)
+
+        # 5. Drop the parent batch record row from the database
+        uploaded_menu.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f"Batch cleared successfully! Removed the scan file and all {items_count} linked menu items."
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f"Batch clear execution aborted: {str(e)}"})

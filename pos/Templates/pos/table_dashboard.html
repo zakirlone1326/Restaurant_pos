@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kashur POS | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* --- KASHUR THEME: WHITE & DIM SAFFRON --- */
         :root {
-            --primary-saffron: #f97316;
-            --primary-dark: #1e1e1e;
-            --bg-light: #f3f4f6;
+            --saffron: #f97316; 
+            --dark: #0f172a; 
+            --emerald: #10b981;
+            --sky: #38bdf8;
+            --slate-500: #64748b;
+            --slate-200: #e2e8f0;
+            --light-gray: #f8fafc;
             --fab-color: #be123c;
             --occupied-dim: #fed7aa; /* Dim Saffron */
             --occupied-text: #92400e; /* Brown text for contrast */
@@ -17,27 +22,178 @@
         }
 
         body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
             margin: 0; 
-            background-color: #ffffff; 
-            color: #374151; 
+            background: #ffffff; 
+            color: var(--dark);
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.5;
+            font-size: 0.95rem;
         }
-        
-        .navbar { 
-            background-color: var(--primary-dark); 
+
+        /* --- SIDEBAR STYLES --- */
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            z-index: 1001;
+            top: 0;
+            left: 0;
+            background-color: var(--dark);
+            overflow-x: hidden;
+            overflow-y: auto;
+            transition: 0.4s;
+            padding-top: 40px;
+            box-shadow: 10px 0 20px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        .sidebar a, .sidebar button {
+            padding: 14px 32px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            display: block;
+            transition: 0.3s;
+            font-weight: 500;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+            line-height: 1.4;
+            box-sizing: border-box;
+        }
+
+        .sidebar a:hover, .sidebar button:hover {
+            color: var(--saffron);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .sidebar .closebtn {
+            position: absolute;
+            top: 10px;
+            right: 25px;
+            font-size: 36px;
+            color: white;
+            width: auto;
+            padding: 0;
+        }
+
+        .sidebar-brand {
+            padding: 20px 32px 30px 32px;
+            font-weight: 700;
+            color: white;
+            font-size: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-brand span { color: var(--saffron); }
+
+        /* Sidebar Navigation Main Wrapper */
+        .sidebar-nav-links {
+            flex-grow: 1;
+        }
+
+        /* Bottom Section Container for Logout, Biller, & Support */
+        .sidebar-bottom-group {
+            margin-top: auto;
+            background: rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Contextual Data Card at the bottom */
+        .sidebar-meta-card {
+            background: rgba(0, 0, 0, 0.25);
+            margin: 15px 24px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border-left: 4px solid var(--saffron);
+        }
+
+        .sidebar-meta-card span {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--slate-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-meta-card b {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 20px 32px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .sidebar-footer p { margin: 4px 0; }
+        .sidebar-footer .dev-title { font-weight: 700; color: var(--slate-500); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;}
+
+        .logout-btn {
+            color: #cbd5e1;
+            font-weight: 500;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .logout-btn:hover {
+            color: #ef4444 !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        /* --- DASHBOARD HEADER NAVBAR --- */
+        .brand { font-weight: 700; text-transform: uppercase; letter-spacing: 0px; margin: 0; font-size: 1.3rem; line-height: 1.2; }
+        .brand span { color: var(--saffron); }
+
+        .header { 
+            background: var(--dark); 
             color: white; 
-            padding: 1rem 2rem; 
+            padding: 16px 32px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
         }
-        .navbar h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
-        .navbar h1 span { color: var(--primary-saffron); }
-        .nav-links a { color: #cbd5e1; text-decoration: none; margin-left: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
-        .nav-links a:hover { color: var(--primary-saffron); }
 
-        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; padding-bottom: 100px; }
+        .main-content-wrapper {
+            padding-top: 100px;
+            box-sizing: border-box;
+        }
+
+        .nav-links a { color: #cbd5e1; text-decoration: none; margin-left: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
+        .nav-links a:hover { color: var(--saffron); }
+
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; padding-bottom: 100px; box-sizing: border-box; }
         
         .header-row { 
             display: flex; 
@@ -58,7 +214,7 @@
         .legend { display: flex; gap: 20px; font-size: 0.7rem; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 
-        /* --- NEW: QUICK ACTIONS CONTROLLERS PANEL --- */
+        /* --- QUICK ACTIONS PANEL --- */
         .direct-actions-panel {
             display: flex;
             gap: 15px;
@@ -75,28 +231,16 @@
             text-align: center;
             border: 2px solid transparent;
         }
-        .btn-dinein {
-            background-color: #eff6ff;
-            color: #1d4ed8;
-            border-color: #bfdbfe;
-        }
+        .btn-dinein { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
         .btn-dinein:hover { background-color: #dbeafe; transform: translateY(-2px); }
         
-        .btn-pickup {
-            background-color: #f0fdf4;
-            color: #15803d;
-            border-color: #bbf7d0;
-        }
+        .btn-pickup { background-color: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
         .btn-pickup:hover { background-color: #dcfce7; transform: translateY(-2px); }
 
-        .btn-delivery {
-            background-color: #fff7ed;
-            color: #c2410c;
-            border-color: #ffedd5;
-        }
+        .btn-delivery { background-color: #fff7ed; color: #c2410c; border-color: #ffedd5; }
         .btn-delivery:hover { background-color: #ffedd5; transform: translateY(-2px); }
 
-        /* --- NEW: MODAL OVERLAY STYLING RULES --- */
+        /* --- MODAL DIALOG OVERLAYS --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -114,7 +258,7 @@
             max-width: 480px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        .modal-card h3 { margin-top: 0; margin-bottom: 20px; color: var(--primary-dark); font-size: 1.3rem; }
+        .modal-card h3 { margin-top: 0; margin-bottom: 20px; color: var(--dark); font-size: 1.3rem; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 700; color: #4b5563; }
         .form-control {
@@ -124,15 +268,15 @@
             border-radius: 8px;
             box-sizing: border-box;
             font-size: 0.95rem;
-            color: var(--primary-dark);
+            color: var(--dark);
         }
-        .form-control:focus { outline: none; border-color: var(--primary-saffron); box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15); }
+        .form-control:focus { outline: none; border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15); }
         .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
         .btn-secondary { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-        .btn-primary { background: var(--primary-saffron); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: var(--saffron); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
         .btn-primary:hover { background-color: #ea580c; }
 
-        /* TABLE GRID LOGIC */
+        /* --- TABLE GRID GRAPHICS --- */
         .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
 
         .table-card { 
@@ -148,42 +292,16 @@
             border: 1px solid #d1d5db;
             position: relative;
         }
-        .table-card:hover { transform: translateY(-3px); border-color: var(--primary-saffron); }
+        .table-card:hover { transform: translateY(-3px); border-color: var(--saffron); }
         
-        /* AVAILABLE STATE */
-        .AVAILABLE { background: #f3f4f6; color: #4b5563; }
-        
-        /* OCCUPIED STATE (Dining) */
-        .OCCUPIED { 
-            background: var(--occupied-dim) !important; 
-            color: var(--occupied-text) !important; 
-            border: 1px solid #fdba74; 
-        }
-        
-        /* BILLED/PENDING STATE (Money awaited) */
-        .BILLED { 
-            background: var(--pending-color); 
-            color: #78350f; 
-            border: 2px dashed #b45309;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
-        }
+        .AVAILABLE { background: #f3f4f6; color: #4b635c; }
+        .OCCUPIED { background: var(--occupied-dim) !important; color: var(--occupied-text) !important; border: 1px solid #fdba74; }
+        .BILLED { background: var(--pending-color); color: #78350f; border: 2px dashed #b45309; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
 
         .table-number { font-size: 2.2rem; font-weight: 400; }
-        
-        .status-tag { 
-            position: absolute; 
-            top: 10px; 
-            left: 10px; 
-            font-size: 10px; 
-            font-weight: 700; 
-            background: rgba(255,255,255,0.4); 
-            padding: 3px 8px; 
-            border-radius: 4px;
-            white-space: nowrap;
-        }
-
+        .status-tag { position: absolute; top: 10px; left: 10px; font-size: 10px; font-weight: 700; background: rgba(255,255,255,0.4); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
         .table-status { font-size: 0.7rem; font-weight: 600; margin-top: 4px; opacity: 0.8; }
-        
+
         .fab { 
             position: fixed; 
             bottom: 30px; 
@@ -208,90 +326,143 @@
 
         @media (max-width: 600px) {
             .direct-actions-panel { flex-direction: column; gap: 10px; }
+            .nav-links { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <div class="navbar">
-        <h1>KOSHUR <span>POS</span></h1>
-        <div class="nav-links">
-            <a href="{% url 'staff_list' %}">Attendance</a>
-             <a href="/admin/analytics/">Reports</a>
-            <a href="/admin/">Settings</a>
+    <div id="mainOverlay" class="overlay" onclick="closeNav()"></div>
+
+    <div id="mySidebar" class="sidebar">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">×</a>
+        <div class="sidebar-brand">KOSHUR <span>POS</span></div>
+        
+        <div class="sidebar-nav-links">
+            <a href="/table/">🧾 Billing</a>
+            <a href="/admin/core/pos/expense/">💸 Expenses</a>
+            <a href="{% url 'admin_dashboard' %}">🛠️ Management</a>
+            <form action="{% url 'logout' %}" method="post" id="logout-form" style="display: none;">
+                {% csrf_token %}
+            </form>
+            <button onclick="if(confirm('Logout from Koshur POS?')) document.getElementById('logout-form').submit();" class="logout-btn">
+                🚪 Logout
+            </button>
+        </div>
+        
+        <div class="sidebar-bottom-group">
+            
+
+            <div class="sidebar-meta-card">
+                <span>Biller Name</span>
+                <b>{{ request.user.get_full_name|default:request.user.username }}</b>
+            </div>
+
+            <div class="sidebar-footer">
+                <p class="dev-title">Developer Support</p>
+                <p>📞 +91 9149562695</p>
+                <p>✉️ lonezakir@gmail.com</p>
+            </div>
         </div>
     </div>
 
-    <div class="container">
-        
-        <div class="direct-actions-panel">
-            <button class="action-btn btn-dinein" onclick="scrollToTables()"('DINE_IN')">🍽️ Dine In (Select Table)</button>
-            <button class="action-btn btn-pickup" onclick="createDirectOrder('PICK_UP')">🛍️ Pick Up</button>
-            <button class="action-btn btn-delivery" onclick="openDeliveryModal()">🛵 Delivery</button>
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-size:30px; cursor:pointer; color: var(--saffron); line-height: 1;" onclick="openNav()">&#9776;</span>
+            <h1 class="brand">KOSHUR <span>POS</span> <small style="font-size: 0.5em; opacity: 0.65; font-weight: 500; margin-left: 8px; letter-spacing: 0.5px;">Live Floor</small></h1>
         </div>
+        <div class="nav-links">
+            <a href="{% url 'staff_list' %}">Attendance</a>
+            <a href="{% url 'admin_analytics' %}">Reports</a>
+            <a href="{% url 'admin_dashboard' %}">Settings</a>
+        </div>
+    </div>
 
-        <div class="header-row">
-            <h2>Floor Map | {{ restaurant_name }}</h2>
-            <div class="legend">
-                <span><span class="dot" style="background: #d1d5db;"></span> Available</span>
-                <span><span class="dot" style="background: var(--occupied-dim);"></span> Occupied</span>
-                <span><span class="dot" style="background: var(--pending-color);"></span> Payment Pending</span>
+    <div class="main-content-wrapper">
+        <div class="container">
+            
+            <div class="direct-actions-panel">
+                <button class="action-btn btn-dinein" onclick="scrollToTables()">🍽️ Dine In (Select Table)</button>
+                <button class="action-btn btn-pickup" onclick="openPickupModal()">🛍️ Pick Up</button>
+                <button class="action-btn btn-delivery" onclick="openDeliveryModal()">🛵 Delivery</button>
             </div>
-        </div>
 
-        <div class="table-grid">
-            {% for table in tables %}
-            <div class="table-card {{ table.status }}" onclick="window.location.href='/table/{{ table.id }}/'">
-                
-                {% if table.status == 'OCCUPIED' or table.status == 'BILLED' %}
-                    <div class="status-tag timer-display" data-start="{{ table.start_time_iso }}">
-                        🕒 ...
+            <div class="header-row">
+                <h2>Floor Map | {{ restaurant_name }}</h2>
+                <div class="legend">
+                    <span><span class="dot" style="background: #36aaa2;"></span> Available</span>
+                    <span><span class="dot" style="background: var(--occupied-dim);"></span> Occupied</span>
+                </div>
+            </div>
+
+            <div class="table-grid">
+                {% for table in tables %}
+                <div class="table-card {{ table.status }}" onclick="window.location.href='/table/{{ table.id }}/'">
+                    
+                    {% if table.status == 'OCCUPIED' or table.status == 'BILLED' %}
+                        <div class="status-tag timer-display" data-start="{{ table.start_time_iso }}">
+                            🕒 ...
+                        </div>
+                    {% endif %}
+
+                    <div class="table-number">T{{ table.table_number }}</div>
+                    <div class="table-status">
+                        {% if table.status == 'BILLED' %}
+                            PAYMENT DUE
+                        {% else %}
+                            {{ table.get_status_display }}
+                        {% endif %}
                     </div>
-                {% endif %}
-
-                <div class="table-number">T{{ table.table_number }}</div>
-                <div class="table-status">
-                    {% if table.status == 'BILLED' %}
-                        PAYMENT DUE
-                    {% else %}
-                        {{ table.get_status_display }}
+                    
+                    {% if table.can_settle %}
+                        <div style="position: absolute; bottom: 10px; right: 10px; font-size: 14px; font-weight: 900;">⋮</div>
                     {% endif %}
                 </div>
-                
-                {% if table.status == 'OCCUPIED' %}
-                    <div style="position: absolute; bottom: 10px; right: 10px; font-size: 14px; font-weight: 900;">⋮</div>
-                {% endif %}
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
 
-        <div class="footer-note">
-            POWERED BY KASHUR POS • 2026
+            <div class="footer-note">
+                POWERED BY KASHUR POS • 2026
+            </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="deliveryModal">
         <div class="modal-card">
             <h3>New Delivery Order</h3>
-            
             <div class="form-group">
                 <label for="cust_phone">Customer Phone Number *</label>
                 <input type="tel" id="cust_phone" class="form-control" placeholder="Enter contact number">
             </div>
-
             <div class="form-group">
                 <label for="cust_name">Customer Name *</label>
                 <input type="text" id="cust_name" class="form-control" placeholder="Enter full name">
             </div>
-
             <div class="form-group">
                 <label for="cust_address">Delivery Address *</label>
                 <textarea id="cust_address" class="form-control" rows="3" placeholder="Enter complete home/office address details" style="resize:none; font-family:inherit;"></textarea>
             </div>
-
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="closeDeliveryModal()">Cancel</button>
                 <button class="btn-primary" onclick="submitDeliveryOrder()">Start Order ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="pickupModal">
+        <div class="modal-card">
+            <h3>Pickup Order (Optional Info)</h3>
+            <div class="form-group">
+                <label for="pickup_phone">Customer Phone Number</label>
+                <input type="tel" id="pickup_phone" class="form-control" placeholder="Optional contact number">
+            </div>
+            <div class="form-group">
+                <label for="pickup_name">Customer Name</label>
+                <input type="text" id="pickup_name" class="form-control" placeholder="Optional full name">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="closePickupModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitPickupOrder()">Confirm Pickup ➡️</button>
             </div>
         </div>
     </div>
@@ -301,18 +472,26 @@
     </a>
 
     <script>
-        // CSRF Token dynamic extraction utility
         const getCSRF = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+        /* --- SIDEBAR ACTIVE DRAWER ANIMATIONS --- */
+        function openNav() {
+            document.getElementById("mySidebar").style.width = "280px";
+            document.getElementById("mainOverlay").style.display = "block";
+        }
+
+        function closeNav() {
+            document.getElementById("mySidebar").style.width = "0";
+            document.getElementById("mainOverlay").style.display = "none";
+        }
 
         function updateTimers() {
             const timerElements = document.querySelectorAll('.timer-display');
-            
             timerElements.forEach(el => {
                 const startTimeStr = el.getAttribute('data-start');
                 if (startTimeStr && startTimeStr !== "None") {
                     const startTime = new Date(startTimeStr);
                     const now = new Date();
-                    
                     const diffMs = now - startTime;
                     const diffMins = Math.floor(diffMs / 60000);
                     
@@ -332,14 +511,13 @@
         updateTimers();
         setInterval(updateTimers, 30000);
 
-        /* --- UPDATED INTERCEPTORS: ADDED SECURITY HEADERS AND FIXED PARAM KEYS --- */
         function createDirectOrder(orderType) {
             let formData = new FormData();
             formData.append('order_type', orderType);
 
             fetch('/api/orders/create-direct/', {
                 method: 'POST',
-                headers: { 'X-CSRFToken': getCSRF() }, // <-- Protects endpoint against validation block errors
+                headers: { 'X-CSRFToken': getCSRF() },
                 body: formData
             })
             .then(res => res.json())
@@ -365,6 +543,17 @@
             document.getElementById('cust_address').value = '';
         }
 
+        function openPickupModal() {
+            document.getElementById('pickupModal').style.display = 'flex';
+            document.getElementById('pickup_phone').focus();
+        }
+
+        function closePickupModal() {
+            document.getElementById('pickupModal').style.display = 'none';
+            document.getElementById('pickup_phone').value = '';
+            document.getElementById('pickup_name').value = '';
+        }
+
         function submitDeliveryOrder() {
             const phone = document.getElementById('cust_phone').value.trim();
             const name = document.getElementById('cust_name').value.trim();
@@ -377,13 +566,13 @@
 
             let formData = new FormData();
             formData.append('order_type', 'DELIVERY');
-            formData.append('customer_phone', phone); // <-- Key match fix
-            formData.append('customer_name', name);   // <-- Key match fix
-            formData.append('delivery_address', address); // <-- Key match fix
+            formData.append('customer_phone', phone);
+            formData.append('customer_name', name);
+            formData.append('delivery_address', address);
 
             fetch('/api/orders/create-direct/', {
                 method: 'POST',
-                headers: { 'X-CSRFToken': getCSRF() }, // <-- Added security token verification validation
+                headers: { 'X-CSRFToken': getCSRF() },
                 body: formData
             })
             .then(res => res.json())
@@ -398,28 +587,47 @@
             .catch(err => console.error("API Call error:", err));
         }
 
-        // Paste this inside your script tag area
-function scrollToTables() {
-    // If a modal is open, close it safely first
-    closeDeliveryModal();
-    
-    // Smoothly scroll down the tablet view directly to the floor layout section
-    const floorMapHeader = document.querySelector('.header-row');
-    if (floorMapHeader) {
-        floorMapHeader.scrollIntoView({ behavior: 'smooth' });
-    }
-    
-    // Flash a temporary clean border around your table grid to guide the waiter's eye
-    const grid = document.querySelector('.table-grid');
-    if (grid) {
-        grid.style.transition = "all 0.4s ease";
-        grid.style.transform = "scale(1.02)";
-        setTimeout(() => {
-            grid.style.transform = "scale(1)";
-        }, 300);
-    }
-}
-    </script>
+        function submitPickupOrder() {
+            const phone = document.getElementById('pickup_phone').value.trim();
+            const name = document.getElementById('pickup_name').value.trim();
 
+            let formData = new FormData();
+            formData.append('order_type', 'PICK_UP');
+            if (phone) formData.append('customer_phone', phone);
+            if (name) formData.append('customer_name', name);
+
+            fetch('/api/orders/create-direct/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCSRF() },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    closePickupModal();
+                    window.location.href = `/pos/direct-order/?order_id=${data.order_id}`;
+                } else {
+                    alert('Error creating pickup order: ' + data.error);
+                }
+            })
+            .catch(err => console.error("API Call error:", err));
+        }
+
+        function scrollToTables() {
+            closeDeliveryModal();
+            const floorMapHeader = document.querySelector('.header-row');
+            if (floorMapHeader) {
+                floorMapHeader.scrollIntoView({ behavior: 'smooth' });
+            }
+            const grid = document.querySelector('.table-grid');
+            if (grid) {
+                grid.style.transition = "all 0.4s ease";
+                grid.style.transform = "scale(1.02)";
+                setTimeout(() => {
+                    grid.style.transform = "scale(1)";
+                }, 300);
+            }
+        }
+    </script>
 </body>
 </html>

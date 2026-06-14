@@ -97,3 +97,13 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = 'admin_dashboard'
+
+
+# ==========================================
+# 📁 MEDIA FILE ASSETS CONFIGURATION (NEW)
+# ==========================================
+# The public URL layout mapping prefix for browser address routing
+MEDIA_URL = '/media/'
+
+# The absolute local file directory on your machine where files save permanently
+MEDIA_ROOT = BASE_DIR / 'media'
