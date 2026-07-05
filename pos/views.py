@@ -387,11 +387,48 @@ def all_orders_view(request):
         'grand_total': stats['total_sum'] or 0.00
     })
 
-
 def kot_management(request):
-    """Kitchen Order Ticket dispatch terminal layout logger"""
-    active_kots = Order.objects.exclude(prep_status='COMPLETED').order_by('-created_at')
-    return render(request, 'pos/kot_list.html', {'kots': active_kots})
+    """Kitchen Order Ticket historical log analyzer with dynamic range windows"""
+    
+    # 1. Start with all orders that aren't cancelled
+    queryset = Order.objects.filter(is_cancelled=False)
+    
+    # 2. Extract the filter parameters from the UI GET request
+    date_filter = request.GET.get('date_range', 'today')  # Defaults to 'today'
+    search_query = request.GET.get('search', '').strip()
+    
+    # 3. Apply text search if entered (searches by Order ID, Customer Name, or Phone)
+    if search_query:
+        if search_query.isdigit():
+            queryset = queryset.filter(id=search_query)
+        else:
+            queryset = queryset.filter(
+                Q(customer_name__icontains=search_query) | 
+                Q(customer_phone__icontains=search_query)
+            )
+    
+    # 4. Apply conditional date truncations
+    now = timezone.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    if date_filter == 'today':
+        queryset = queryset.filter(created_at__gte=today_start)
+    elif date_filter == 'yesterday':
+        yesterday_start = today_start - timedelta(days=1)
+        queryset = queryset.filter(created_at__range=(yesterday_start, today_start))
+    elif date_filter == 'this_month':
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        queryset = queryset.filter(created_at__gte=month_start)
+    # If date_filter == 'all', we skip filtering and show everything
+
+    # Order by newest tickets first
+    active_kots = queryset.order_by('-created_at')
+
+    context = {
+        'kots': active_kots,
+        'current_filter': date_filter
+    }
+    return render(request, 'pos/kot_list.html', context)
 
 def menu_hub(request):
     """Advanced Multi-Stage Menu Tab Routing Processor Matrix"""
@@ -454,17 +491,27 @@ def table_dashboard(request):
     tables = Table.objects.all().order_by(Length('table_number').asc(), 'table_number')
     
     for table in tables:
-        active_order = table.orders.filter(is_cancelled=False).exclude(
+        # 1. Look for an active order that actually has printed kitchen entries (KOT)
+        active_order = table.orders.filter(
+            is_cancelled=False,
+            items__is_printed_to_kitchen=True
+        ).exclude(
             Q(payment_status='PAID') | Q(payment_status='PENDING')
-        ).first()
+        ).distinct().first()
         
-        table.start_time_iso = active_order.created_at.isoformat() if active_order else None
+        # 2. Force change the status in memory based strictly on real printed KOTs
+        if active_order:
+            table.status = 'OCCUPIED'
+            table.start_time_iso = active_order.created_at.isoformat()
+        else:
+            # If there's an empty scratchpad cart or no order, force it to stay AVAILABLE
+            table.status = 'AVAILABLE'
+            table.start_time_iso = None
 
     return render(request, 'pos/table_dashboard.html', {
         'tables': tables, 
         'restaurant_name': restaurant.name if restaurant else "KOSHUR POS"
     })
-
 
 # ==========================================
 # 🍽️ POS TERMINAL LINE BILLING SERVICES
@@ -546,7 +593,23 @@ def billing_screen(request, table_id=None):
     }
     
     if table_id and str(table_id) != '0':
-        context['table'] = get_object_or_404(Table, id=table_id)
+        table = get_object_or_404(Table, id=table_id)
+        context['table'] = table
+        
+        # 🟢 NEW: Clean up older empty/scratchpad orders left behind from previous abandoned sessions
+        # If an order exists for this table but NEVER printed a KOT, auto-cancel it so the cart starts fresh.
+        unprinted_stale_orders = table.orders.filter(
+            is_cancelled=False,
+            is_settled=False
+        ).exclude(items__is_printed_to_kitchen=True)
+        
+        if unprinted_stale_orders.exists():
+            # Mark them as cancelled so they disappear from the current active cart context
+            unprinted_stale_orders.update(
+                is_cancelled=True, 
+                cancel_reason="Abandoned without printing KOT"
+            )
+            
     else:
         order_id = request.GET.get('order_id')
         if order_id:
@@ -813,6 +876,12 @@ def admin_analytics(request):
         is_cancelled=False
     ).values('menu_variant__menu_item__name').annotate(total_qty=Sum('quantity')).order_by('-total_qty')[:5]
 
+    # --- NEW: Scope the counts to the selected date range ---
+    orders_in_range = valid_orders.filter(created_at__date__range=[start_date, end_date])
+    
+    completed_orders_count = orders_in_range.filter(payment_status='PAID').count()
+    pending_orders_count = orders_in_range.filter(payment_status='PENDING').count()
+
     return render(request, 'admin/analytics.html', {
         'days': days, 
         'revenue_data': revenue_data, 
@@ -822,7 +891,12 @@ def admin_analytics(request):
         'total_revenue': sum(revenue_data), 
         'total_expenses': sum(expense_data), 
         'net_profit': sum(revenue_data) - sum(expense_data), 
-        'total_orders': valid_orders.filter(created_at__date__range=[start_date, end_date]).count(), 
+        'total_orders': orders_in_range.count(), 
+        
+        # --- ADDED: Maps directly to your HTML template labels ---
+        'completed_orders': completed_orders_count, 
+        'pending_orders': pending_orders_count,
+        
         'start_date': start_date.strftime('%Y-%m-%d'), 
         'end_date': end_date.strftime('%Y-%m-%d'), 
         'restaurant_name': res.name if res else "KOSHUR POS"
@@ -1203,3 +1277,10 @@ def delete_uploaded_menu_batch(request, file_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': f"Batch clear execution aborted: {str(e)}"})
+
+
+def management_grid(request):
+    res = Restaurant.objects.first()
+    return render(request, 'admin/management_grid.html', {
+        'restaurant_name': res.name if res else "KOSHUR POS"
+    })

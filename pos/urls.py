@@ -59,4 +59,6 @@ urlpatterns = [
 
     path('upload-menu-image-async/', views.upload_menu_image_async, name='upload_menu_image_async'),
     path('delete-menu-batch/<int:file_id>/', views.delete_uploaded_menu_batch, name='delete_menu_batch'),
+
+    
 ]

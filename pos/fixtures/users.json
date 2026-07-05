@@ -3,7 +3,7 @@
     "model": "auth.user",
     "pk": 1,
     "fields": {
-      "username": "9149562695",
+      "username": "Zakir Hussain Lone",
       "email": "lonezakir1326@gmail.com",
       "password": "pbkdf2_sha256$870000$mockSaltStringForLocalDevOnly$iZkWmCHlS8fEaIqYpTjGzBqV9wXmK4rL7bN1vP3cDhA=",
       "is_active": true,

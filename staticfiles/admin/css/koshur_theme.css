@@ -1,0 +1,69 @@
+/* ============================================================
+   KOSHUR POS - TRUE SAFFRON RESET (NO MORE GREEN)
+   ============================================================ */
+
+:root {
+    --saffron-bold: #f97316 !important;
+    --slate-gray: #94a3b8 !important;
+}
+
+/* --- THE BRANDING FIX --- */
+.brand-link .brand-text {
+    font-family: 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: var(--slate-gray) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* --- THE "AVAILABLE" GREEN VANISH --- */
+/* We are targeting the specific nested span Jazzmin uses for status badges */
+.badge-success, 
+.bg-success, 
+span.badge-success, 
+td.field-status .badge,
+.badge-pill.badge-success {
+    background-color: #fff7ed !important; /* Soft Peach Bg */
+    color: #c2410c !important;            /* Burnt Saffron Text */
+    border: 1px solid #ffedd5 !important;
+    font-family: 'Segoe UI', sans-serif !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.7rem !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    display: inline-block !important;
+    padding: 0.35em 0.65em !important;
+}
+
+/* This kills the little green 'dot' icon inside the badge */
+.badge-success::before, 
+.badge-available::before,
+.bg-success::before {
+    background-color: #f97316 !important;
+}
+
+/* --- THE BUTTONS FIX (SAFFRON NOT YELLOW) --- */
+.btn-warning, 
+.addlink, 
+input[name="_save"], 
+.btn-success,
+#searchbar + .btn {
+    background-color: var(--saffron-bold) !important;
+    background-image: none !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-shadow: none !important;
+}
+
+/* --- THE SIDEBAR FIX --- */
+.main-sidebar {
+    background-color: #0f172a !important; /* Deep Slate */
+}
+
+.nav-sidebar .nav-link {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}

@@ -15,6 +15,8 @@ urlpatterns = [
     # 3. The Master Key - Includes all routes from pos/urls.py
     path('', include('pos.urls')), 
 
+    path('admin/management/', views.management_grid, name='management_grid'),
+
    
 ]
 

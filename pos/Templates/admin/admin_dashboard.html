@@ -126,6 +126,91 @@
             cursor: pointer;
         }
 
+        /* --- IMMERSIVE FULL-SCREEN MODAL STYLES --- */
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 20px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.9);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            display: inline-block;
+        }
+
+        .modal-box h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.4rem;
+            color: var(--dark);
+            font-weight: 700;
+        }
+
+        .modal-box p {
+            margin: 0 0 28px 0;
+            color: var(--slate-500);
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-confirm {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-confirm:hover {
+            opacity: 0.9;
+        }
+
+        .btn-cancel {
+            background-color: var(--light-gray);
+            color: var(--dark);
+            border: 1px solid var(--slate-200);
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #f1f5f9;
+        }
+
         /* --- DASHBOARD STYLES --- */
         .brand { font-weight: 700; text-transform: uppercase; letter-spacing: 0px; margin: 0; font-size: 1.3rem; line-height: 1.2; }
         .brand span { color: var(--saffron); }
@@ -335,6 +420,19 @@
 
     <div id="mainOverlay" class="overlay" onclick="closeNav()"></div>
 
+    <!-- FULL SCREEN LOGOUT MODAL -->
+    <div id="logoutModal" class="fullscreen-modal">
+        <div id="modalBox" class="modal-box">
+            <span class="modal-icon">🚪</span>
+            <h2>Log Out of Koshur POS?</h2>
+            <p>Are you sure you want to log out? You will need to enter your credentials to access the terminal again.</p>
+            <div class="modal-actions">
+                <button class="btn-confirm" onclick="document.getElementById('logout-form').submit();">Log Out</button>
+                <button class="btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="mySidebar" class="sidebar">
         <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">×</a>
         <div class="sidebar-brand">KOSHUR <span>POS</span></div>
@@ -362,7 +460,7 @@
             <form action="{% url 'logout' %}" method="post" id="logout-form" style="display: none;">
                 {% csrf_token %}
             </form>
-            <button onclick="if(confirm('Logout from Koshur POS?')) document.getElementById('logout-form').submit();" class="logout-btn">
+            <button onclick="openLogoutModal()" class="logout-btn">
                 🚪 Log out
             </button>
         </div>
@@ -530,6 +628,31 @@
         function closeNav() {
             document.getElementById("mySidebar").style.width = "0";
             document.getElementById("mainOverlay").style.display = "none";
+        }
+
+        function openLogoutModal() {
+            closeNav(); // Close the sidebar first
+            const modal = document.getElementById("logoutModal");
+            const box = document.getElementById("modalBox");
+            
+            modal.style.display = "flex";
+            // Timeout enables clean animation sequencing
+            setTimeout(() => {
+                modal.style.opacity = "1";
+                box.style.transform = "scale(1)";
+            }, 20);
+        }
+
+        function closeLogoutModal() {
+            const modal = document.getElementById("logoutModal");
+            const box = document.getElementById("modalBox");
+            
+            modal.style.opacity = "0";
+            box.style.transform = "scale(0.9)";
+            
+            setTimeout(() => {
+                modal.style.display = "none";
+            }, 250);
         }
 
         function toggleDateInputs() {

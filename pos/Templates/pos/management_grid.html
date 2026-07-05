@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Management | {{ restaurant_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .menu-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            height: 100%;
+        }
+        .menu-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            background-color: #f8fafc;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+        .icon-box {
+            font-size: 1.5rem;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f1f5f9;
+            border-radius: 8px;
+        }
+        .card-title { font-weight: 600; margin: 0; font-size: 1rem; }
+        .section-header { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/admin/" class="btn btn-sm btn-outline-secondary me-3 rounded-pill">⬅ Back</a>
+        <h4 class="fw-bold m-0">🛠 Management Control Panel</h4>
+    </div>
+
+    <p class="section-header">Core Management</p>
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/pos/order/" class="menu-card">
+                <div class="icon-box">📋</div>
+                <h6 class="card-title">Order List</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/pos/kot/" class="menu-card">
+                <div class="icon-box">🍳</div>
+                <h6 class="card-title">KOT List</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/inventory/" class="menu-card">
+                <div class="icon-box">📦</div>
+                <h6 class="card-title">Inventory List</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/expenses/" class="menu-card">
+                <div class="icon-box">💵</div>
+                <h6 class="card-title">Expense</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/notifications/" class="menu-card">
+                <div class="icon-box">🔔</div>
+                <h6 class="card-title">Notifications</h6>
+            </a>
+        </div>
+    </div>
+
+    <p class="section-header">Configuration & Setup</p>
+    <div class="row g-3">
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/settings/printer/" class="menu-card">
+                <div class="icon-box">🖨️</div>
+                <h6 class="card-title">Printer Setting</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/settings/invoice/" class="menu-card">
+                <div class="icon-box">🧾</div>
+                <h6 class="card-title">Invoice Structure</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/tools/export/" class="menu-card">
+                <div class="icon-box">💾</div>
+                <h6 class="card-title">Export Database</h6>
+            </a>
+        </div>
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <a href="/admin/tools/reset-bill/" class="menu-card" onclick="return confirm('Are you sure you want to reset the bill counter?');">
+                <div class="icon-box">🔄</div>
+                <h6 class="card-title text-danger">Reset Bill No.</h6>
+            </a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

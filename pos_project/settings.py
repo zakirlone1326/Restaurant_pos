@@ -1,6 +1,7 @@
 """
 Django settings for pos_project project.
 Cleaned up to use default Django Admin (Jazzmin Removed)
+Fully updated for django-csp 4.0+ and OWASP ZAP Security remediations.
 """
 
 from pathlib import Path
@@ -26,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'csp',  # Required app registry for django-csp v4.0+
     'pos', 
 ]
 
@@ -37,6 +39,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'csp.middleware.CSPMiddleware', 
 ]
 
 ROOT_URLCONF = 'pos_project.urls'
@@ -93,6 +96,7 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -100,10 +104,47 @@ LOGIN_REDIRECT_URL = 'admin_dashboard'
 
 
 # ==========================================
-# 📁 MEDIA FILE ASSETS CONFIGURATION (NEW)
+# 📁 MEDIA FILE ASSETS CONFIGURATION
 # ==========================================
-# The public URL layout mapping prefix for browser address routing
 MEDIA_URL = '/media/'
-
-# The absolute local file directory on your machine where files save permanently
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# ==============================================================================
+# 🛡️ SECURITY & CONTENT SECURITY POLICY (CSP) SETTINGS (OWASP ZAP REMEDIATIONS)
+# ==============================================================================
+
+# 1. Dictionary format updated for django-csp version 4.0+ to whitelist layout engines
+CONTENT_SECURITY_POLICY = {
+    'DIRECTIVES': {
+        'default-src': ("'self'",),
+        
+        # 'data:' allowed for base64 element renders; 'self' for local media files
+        'img-src': ("'self'", 'data:', '/media/'),
+        
+        # Authorized script sources: self, local templates inline scripts, and jsDelivr CDN
+        'script-src': (
+            "'self'",
+            "'unsafe-inline'",
+            'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com',
+        ),
+        
+        # Authorized style sources: Bootstrap layout frameworks and Google Web Fonts
+        'style-src': (
+            "'self'",
+            "'unsafe-inline'",
+            'https://cdn.jsdelivr.net',
+            'https://fonts.googleapis.com',
+        ),
+        
+        # Allows standard typography layouts requested by Google Fonts CDN or Admin UI
+        'font-src': (
+            "'self'",
+            'data:',
+            'https://fonts.gstatic.com',
+        ),
+        
+        # Protects analytics workspace frames from outside hijacking
+        'frame-ancestors': ("'self'",),
+    }
+}

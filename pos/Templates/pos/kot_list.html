@@ -1,40 +1,269 @@
 {% extends "admin/admin_dashboard.html" %}
+
 {% block content %}
-<div style="max-width: 1200px; margin: auto; padding: 20px;">
+<style>
+    .kot-terminal-container {
+        max-width: 1200px;
+        margin: auto;
+        padding: 20px;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    /* Top Navigation Filter Panel */
+    .filter-control-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .panel-header h2 {
+        margin: 0;
+        color: var(--dark, #1e293b);
+    }
+    .panel-header p {
+        margin: 4px 0 0 0;
+        color: var(--slate-500, #64748b);
+        font-size: 0.85rem;
+    }
+    .filter-form {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .search-input {
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--slate-200, #e2e8f0);
+        font-size: 0.9rem;
+        min-width: 220px;
+        outline: none;
+    }
+    .filter-dropdown {
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--slate-200, #e2e8f0);
+        font-size: 0.9rem;
+        background: white;
+        min-width: 140px;
+        font-weight: 500;
+        cursor: pointer;
+        outline: none;
+    }
+    .search-submit-btn {
+        background: var(--dark, #1e293b);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .search-submit-btn:hover {
+        opacity: 0.9;
+    }
+
+    /* KOT Grid & Cards Card Layouts */
+    .kot-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 20px;
+    }
+    .kot-card {
+        background: white;
+        border-radius: 16px;
+        border-top: 6px solid var(--saffron, #f97316);
+        padding: 20px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    /* Card Top Meta Rows */
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 1px dashed var(--slate-200, #e2e8f0);
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+    .order-title {
+        margin: 0;
+        font-size: 1.1rem;
+        color: var(--dark, #1e293b);
+    }
+    .order-timestamp {
+        font-size: 0.75rem;
+        color: var(--slate-500, #64748b);
+    }
+    .fulfillment-badge {
+        background: var(--light-gray, #f1f5f9);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: var(--dark, #1e293b);
+    }
+
+    /* Menu Items Sub-lists */
+    .items-container {
+        margin-bottom: 20px;
+    }
+    .menu-item-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 0.95rem;
+    }
+    .menu-item-row strong {
+        color: var(--saffron, #f97316);
+    }
+    .variant-size-label {
+        font-size: 0.8rem;
+        color: var(--slate-500, #64748b);
+    }
+    .kitchen-note-box {
+        font-size: 0.8rem;
+        color: #b45309;
+        background: #fffbeb;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        font-style: italic;
+    }
+
+    /* Footer Action Panels */
+    .card-footer-panel {
+        border-top: 1px solid var(--light-gray, #f1f5f9);
+        padding-top: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .status-completed {
+        color: #065f46;
+        background: #d1fae5;
+    }
+    .status-preparing {
+        color: #1e3a8a;
+        background: #dbeafe;
+    }
+    .status-pending {
+        color: #9a3412;
+        background: #ffedd5;
+    }
     
-    <!-- Title Area -->
-    <div style="margin-bottom: 24px;">
-        <h2 style="margin: 0; color: var(--dark);">🍳 Live Kitchen Tickets (KOT)</h2>
-        <p style="margin: 4px 0 0 0; color: var(--slate-500); font-size: 0.85rem;">Active orders currently being prepared or waiting to be served</p>
+    /* Control Action Button Tray Layout */
+    .action-button-tray {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .invoice-view-btn, .invoice-delete-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+    .invoice-view-btn {
+        background: #f1f5f9;
+        color: var(--slate-500, #64748b);
+        border: 1px solid var(--slate-200, #e2e8f0);
+    }
+    .invoice-view-btn:hover {
+        background: #e2e8f0;
+        color: var(--dark, #1e293b);
+    }
+    .invoice-delete-btn {
+        background: #fef2f2;
+        color: #ef4444;
+        border: 1px solid #fee2e2;
+    }
+    .invoice-delete-btn:hover {
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+    }
+
+    /* Empty Grid Fallback Box */
+    .empty-fallback-state {
+        grid-column: 1 / -1;
+        background: white;
+        padding: 60px;
+        border-radius: 16px;
+        text-align: center;
+        color: var(--slate-500, #64748b);
+        border: 1px dashed var(--slate-200, #e2e8f0);
+    }
+</style>
+
+<div class="kot-terminal-container">
+    
+    <div class="filter-control-panel">
+        <div class="panel-header">
+            <h2>🍳 Kitchen Order Tickets (KOT) Log</h2>
+            <p>Monitor restaurant preparation pipelines and status history.</p>
+        </div>
+
+        <form method="GET" action="" class="filter-form" id="kotFilterForm">
+            <input type="text" name="search" value="{{ request.GET.search|default:'' }}" placeholder="Search KOT..." class="search-input">
+            
+            <select name="date_range" class="filter-dropdown" id="dateRangeSelect">
+                <option value="today" {% if current_filter == 'today' %}selected{% endif %}>Today</option>
+                <option value="yesterday" {% if current_filter == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                <option value="this_month" {% if current_filter == 'this_month' %}selected{% endif %}>This Month</option>
+                <option value="all" {% if current_filter == 'all' %}selected{% endif %}>All Time</option>
+            </select>
+            
+            <button type="submit" class="search-submit-btn">Search</button>
+        </form>
     </div>
 
-    <!-- Active KOT Cards Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+    <div class="kot-cards-grid" id="kotCardsGrid">
         {% for kot in kots %}
-        <div style="background: white; border-radius: 16px; border-top: 6px solid var(--saffron); padding: 20px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="kot-card" id="kot-card-{{ kot.id }}">
             
-            <!-- Top Card Stats -->
             <div>
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed var(--slate-200); padding-bottom: 12px; margin-bottom: 12px;">
+                <div class="card-header-row">
                     <div>
-                        <h3 style="margin: 0; font-size: 1.1rem; color: var(--dark);">Order #{{ kot.id }}</h3>
-                        <span style="font-size: 0.75rem; color: var(--slate-500);">⏱️ {{ kot.created_at|date:"h:i A" }}</span>
+                        <h3 class="order-title" data-order-num="{{ kot.id }}">ORD-{{ kot.id }}</h3>
+                        <span class="order-timestamp" data-time="{{ kot.created_at|date:'d/m/Y H:i' }}">⏱️ {{ kot.created_at|date:"d M Y, h:i A" }}</span>
                     </div>
-                    <span style="background: var(--light-gray); padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; color: var(--dark);">
+                    <span class="fulfillment-badge" data-table-label="{% if kot.order_type == 'DINE_IN' %}{{ kot.table.table_number }}{% else %}{{ kot.get_order_type_display }}{% endif %}">
                         {% if kot.order_type == 'DINE_IN' %}🍽️ Table {{ kot.table.table_number }}{% elif kot.order_type == 'PICK_UP' %}🛍️ Pickup{% else %}🛵 Delivery{% endif %}
                     </span>
                 </div>
 
-                <!-- Items Loop -->
-                <div style="margin-bottom: 20px;">
+                <div class="items-container">
                     {% for item in kot.items.all %}
                         {% if not item.is_cancelled %}
-                        <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.95rem;">
-                            <span><strong style="color: var(--saffron);">{{ item.quantity }}x</strong> {{ item.menu_variant.menu_item.name }}</span>
-                            <span style="font-size: 0.8rem; color: var(--slate-500);">({{ item.menu_variant.size_name }})</span>
+                        <div class="menu-item-row" data-qty="{{ item.quantity }}" data-name="{{ item.menu_variant.menu_item.name }}">
+                            <span><strong class="quantity-prefix">{{ item.quantity }}x</strong> {{ item.menu_variant.menu_item.name }}</span>
+                            <span class="variant-size-label">({{ item.menu_variant.size_name }})</span>
                         </div>
                         {% if item.notes %}
-                            <div style="font-size: 0.8rem; color: #b45309; background: #fffbeb; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px; font-style: italic;">
+                            <div class="kitchen-note-box">
                                 📝 {{ item.notes }}
                             </div>
                         {% endif %}
@@ -43,25 +272,198 @@
                 </div>
             </div>
 
-            <!-- Pipeline Progress Action Button -->
-            <div style="border-top: 1px solid var(--light-gray); padding-top: 14px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.8rem; font-weight: 700; color: #1e3a8a; background: #dbeafe; padding: 4px 8px; border-radius: 6px;">
-                    {{ kot.get_prep_status_display }}
-                </span>
+            <div class="card-footer-panel">
+                <div>
+                    {% if kot.prep_status == 'COMPLETED' %}
+                        <span class="status-badge status-completed">
+                            🏁 {{ kot.get_prep_status_display }}
+                        </span>
+                    {% elif kot.prep_status == 'IN_PREPARATION' %}
+                        <span class="status-badge status-preparing">
+                            ⏳ {{ kot.get_prep_status_display }}
+                        </span>
+                    {% else %}
+                        <span class="status-badge status-pending">
+                            📝 {{ kot.get_prep_status_display }}
+                        </span>
+                    {% endif %}
+                </div>
                 
-                <!-- Quick link straight back to the traditional pos screen billing matrix if needed -->
-                <a href="{% if kot.table %}{% url 'billing_screen' kot.table.id %}{% else %}{% url 'billing_screen_direct' %}?order_id={{ kot.id }}{% endif %}" 
-                   style="text-decoration: none; background: var(--dark); color: white; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; transition: opacity 0.2s;">
-                    Open Bill ➔
-                </a>
+                <div class="action-button-tray">
+                    <div onclick="generateThermalKOT('{{ kot.id }}')" title="View KOT Invoice" class="invoice-view-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </div>
+
+                    <div onclick="deleteKOTRecord('{{ kot.id }}')" title="Delete KOT Ticket" class="invoice-delete-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                    </div>
+                </div>
             </div>
 
         </div>
         {% empty %}
-        <div style="grid-column: 1 / -1; background: white; padding: 40px; border-radius: 16px; text-align: center; color: var(--slate-500); border: 1px dashed var(--slate-200);">
-            🍳 No live kitchen tickets cooking right now! All tables are cleared.
+        <div class="empty-fallback-state">
+            🍳 No historical kitchen tickets found matching the selected filtering parameters!
         </div>
         {% endfor %}
     </div>
 </div>
+
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Dropdown filter submission tracking setup
+        const dateDropdown = document.getElementById("dateRangeSelect");
+        const filterForm = document.getElementById("kotFilterForm");
+
+        if (dateDropdown && filterForm) {
+            dateDropdown.addEventListener("change", function() {
+                filterForm.submit();
+            });
+        }
+
+        // 2. Clear out cards that were previously deleted via local storage tracking index
+        const deletedKOTs = JSON.parse(localStorage.getItem('deleted_kots') || '[]');
+        deletedKOTs.forEach(id => {
+            const el = document.getElementById(`kot-card-${id}`);
+            if (el) el.remove();
+        });
+
+        // 3. Double-check if card panel is empty after cleaning storage exclusions
+        const remainingCards = document.querySelectorAll('.kot-card');
+        if (remainingCards.length === 0) {
+            const grid = document.getElementById('kotCardsGrid');
+            if (grid) {
+                grid.innerHTML = `
+                    <div class="empty-fallback-state">
+                        🍳 No historical kitchen tickets found matching the selected filtering parameters!
+                    </div>
+                `;
+            }
+        }
+    });
+
+    // Zero-Backend Front-End LocalStorage Deletion Handler
+    function deleteKOTRecord(kotId) {
+        if (!confirm(`Are you absolutely sure you want to delete Ticket ORD-${kotId}? This will remove it from the display permanently.`)) {
+            return;
+        }
+
+        const targetElementCard = document.getElementById(`kot-card-${kotId}`);
+
+        // Save target ID token into browser cache tracking cluster
+        let deletedKots = JSON.parse(localStorage.getItem('deleted_kots') || '[]');
+        if (!deletedKots.includes(kotId)) {
+            deletedKots.push(kotId);
+            localStorage.setItem('deleted_kots', JSON.stringify(deletedKots));
+        }
+
+        if (targetElementCard) {
+            // Smooth scale compression & hide visual layout execution animation
+            targetElementCard.style.transform = 'scale(0.85)';
+            targetElementCard.style.opacity = '0';
+            setTimeout(() => {
+                targetElementCard.remove();
+                
+                // Recalculate context limits to display empty box if zero cards left
+                if (document.querySelectorAll('.kot-card').length === 0) {
+                    document.getElementById('kotCardsGrid').innerHTML = `
+                        <div class="empty-fallback-state">
+                            🍳 No historical kitchen tickets found matching the selected filtering parameters!
+                        </div>
+                    `;
+                }
+            }, 300);
+        }
+    }
+
+    // Thermal KOT Document Constructor Engine
+    function generateThermalKOT(kotId) {
+        const targetCard = document.getElementById(`kot-card-${kotId}`);
+        if (!targetCard) return;
+
+        const orderNum = targetCard.querySelector('.order-title').getAttribute('data-order-num');
+        const dateTimeStr = targetCard.querySelector('.order-timestamp').getAttribute('data-time');
+        const tableLabel = targetCard.querySelector('.fulfillment-badge').getAttribute('data-table-label');
+        
+        const itemRows = targetCard.querySelectorAll('.menu-item-row');
+        let dynamicItemsHTML = '';
+        
+        itemRows.forEach(row => {
+            const qty = row.getAttribute('data-qty');
+            const name = row.getAttribute('data-name');
+            dynamicItemsHTML += `
+                <tr style="font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: bold;">
+                    <td style="padding: 6px 0; text-align: left; width: 15%;">${qty}</td>
+                    <td style="padding: 6px 0; text-align: left; width: 85%;">${name}</td>
+                </tr>
+            `;
+        });
+
+        const printWindow = window.open('', '_blank', 'width=450,height=600,top=100,left=100');
+        
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>KOT - ORD-${orderNum}</title>
+                <style>
+                    body { margin: 0; padding: 30px; background: #ffffff; font-family: 'Courier New', Courier, monospace; color: #000000; }
+                    .thermal-wrap { max-width: 380px; margin: 0 auto; text-align: center; }
+                    .main-header { font-size: 26px; font-weight: 900; margin: 0 0 10px 0; letter-spacing: 1px; }
+                    .table-sub-header { font-size: 22px; font-weight: 900; margin: 0 0 15px 0; }
+                    .meta-divider { border-top: 2px solid #000000; margin: 8px 0; }
+                    .meta-info-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; padding: 2px 0; }
+                    .items-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+                    .table-header-row th { border-bottom: 2px solid #000000; padding-bottom: 6px; font-size: 14px; font-weight: 900; }
+                    .footer-divider { border-top: 2px solid #000000; margin: 15px 0 10px 0; }
+                    .new-items-alert { font-size: 14px; font-weight: 900; margin: 12px 0 20px 0; letter-spacing: 0.5px; }
+                    .print-btn-container { margin-top: 25px; }
+                    .action-print-btn { font-family: system-ui, sans-serif; background: #f3f4f6; color: #111827; border: 1px solid #d1d5db; padding: 8px 18px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+                    .action-print-btn:hover { background: #e5e7eb; }
+                    @media print { .print-btn-container { display: none !important; } body { padding: 0; margin: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="thermal-wrap">
+                    <div class="main-header">KOT</div>
+                    <div class="table-sub-header">TABLE: &nbsp;${tableLabel}</div>
+                    
+                    <div class="meta-divider"></div>
+                    <div class="meta-info-row">
+                        <span>Order: #${orderNum}</span>
+                        <span>Date: ${dateTimeStr}</span>
+                    </div>
+                    
+                    <table class="items-table">
+                        <thead>
+                            <tr class="table-header-row">
+                                <th style="text-align: left; width: 15%;">QTY</th>
+                                <th style="text-align: left; width: 85%;">ITEM NAME</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${dynamicItemsHTML}
+                        </tbody>
+                    </table>
+                    
+                    <div class="footer-divider"></div>
+                    <div class="new-items-alert">*** NEW ITEMS ONLY ***</div>
+                    
+                    <div class="print-btn-container">
+                        <button class="action-print-btn" onclick="window.print()">Print Again</button>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    }
+</script>
 {% endblock %}
