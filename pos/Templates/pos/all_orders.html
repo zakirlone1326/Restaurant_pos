@@ -31,17 +31,19 @@
     .badge-paid { background: #ecfdf5; color: #059669; border: 1px solid #d1fae5; }
     .badge-unpaid { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
     .badge-pending { background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
-    .badge-cancelled { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .badge-cancelled { background: #f1f5f9; color: #e82704; border: 1px solid #e2e8f0; }
     
     .payment-mode-text { display: block; font-size: 8px; color: #94a3b8; margin-top: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
     .icon-btn { background: #f1f5f9; padding: 8px 12px; border-radius: 8px; text-decoration: none; color: #475569; font-size: 0.85rem; border: 1px solid #e2e8f0; }
-    .dropdown { position: relative; display: inline-block; }
-    .dots-btn { background: #f1f5f9; border: none; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-    .dropdown-content { display: none; position: absolute; right: 0; background-color: #fff; min-width: 120px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2); z-index: 1; border-radius: 8px; padding: 8px; }
-    .dropdown-content.show { display: block; }
-    .dropdown-content a { color: #333; padding: 6px; display: block; text-decoration: none; font-size: 0.8rem; }
-    .dropdown-content a:hover { background: #f8fafc; }
-
+    
+    /* Quick Action Dropdown for Status Update */
+    .payment-action-container { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; position: relative; }
+    .pay-trigger-btn { background: #10b981; color: white; border: none; width: 22px; height: 22px; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; transition: background 0.2s; border: 1px solid #059669; }
+    .pay-trigger-btn:hover { background: #059669; }
+    .pay-dropdown { display: none; position: absolute; left: 0; top: 100%; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; min-width: 140px; margin-top: 4px; overflow: hidden; }
+    .pay-dropdown form { margin: 0; display: block; }
+    .pay-dropdown-btn { display: block; width: 100%; text-align: left; background: none; border: none; padding: 8px 12px; font-size: 12px; color: #334155; cursor: pointer; transition: background 0.15s; font-weight: 500; }
+    .pay-dropdown-btn:hover { background: #f1f5f9; color: #1e293b; }
 </style>
 
 <div class="orders-container">
@@ -91,7 +93,7 @@
                         <td>{{ order.customer_name|default:"---" }}</td>
                         <td>
                             {% if order.is_cancelled %}
-                                <span class="badge badge-cancelled">Cancelled</span>
+                                <span class="badge badge-cancelled">❌ Cancelled</span>
                             {% else %}
                                 <span class="badge">{{ order.get_prep_status_display }}</span>
                             {% endif %}
@@ -107,7 +109,18 @@
                             {% elif order.payment_status == 'UNPAID' %}
                                 <span class="badge badge-unpaid">❌ Unpaid</span>
                             {% else %}
-                                <span class="badge badge-pending">⏳ Pending</span>
+                                <div class="payment-action-container">
+                                    <span class="badge badge-pending">⏳ Pending</span>
+                                    <button class="pay-trigger-btn" onclick="togglePayMenu(event, 'pay-menu-{{ order.id }}')" title="Mark as Paid">✓</button>
+                                    
+                                    <div id="pay-menu-{{ order.id }}" class="pay-dropdown">
+                                        <form method="POST" action="{% url 'mark_order_paid' order.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" name="payment_mode" value="CASH" class="pay-dropdown-btn">💵 Cash Payment</button>
+                                            <button type="submit" name="payment_mode" value="ONLINE" class="pay-dropdown-btn">💳 Online / UPI</button>
+                                        </form>
+                                    </div>
+                                </div>
                             {% endif %}
                         </td>
                         <td>{{ order.created_at|date:"d M Y, h:i A" }}</td>
@@ -124,15 +137,33 @@
 </div>
 
 <script>
-    function toggleDropdown(id) {
-        document.getElementById("dropdown-" + id).classList.toggle("show");
+    // Toggle the payment method selector dropdown
+    function togglePayMenu(event, menuId) {
+        event.stopPropagation();
+        
+        // Close all other payment menus first
+        var openMenus = document.getElementsByClassName("pay-dropdown");
+        for (var i = 0; i < openMenus.length; i++) {
+            if (openMenus[i].id !== menuId) {
+                openMenus[i].style.display = "none";
+            }
+        }
+        
+        // Toggle the targeted menu
+        var targetMenu = document.getElementById(menuId);
+        if (targetMenu.style.display === "block") {
+            targetMenu.style.display = "none";
+        } else {
+            targetMenu.style.display = "block";
+        }
     }
-    // Close dropdown if user clicks outside
+
+    // Global click handler to close open dropdowns if clicked outside
     window.onclick = function(event) {
-        if (!event.target.matches('.dots-btn')) {
-            var dropdowns = document.getElementsByClassName("dropdown-content");
-            for (var i = 0; i < dropdowns.length; i++) {
-                dropdowns[i].classList.remove('show');
+        if (!event.target.matches('.pay-trigger-btn') && !event.target.closest('.pay-dropdown')) {
+            var menus = document.getElementsByClassName("pay-dropdown");
+            for (var i = 0; i < menus.length; i++) {
+                menus[i].style.display = "none";
             }
         }
     }

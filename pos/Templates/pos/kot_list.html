@@ -276,7 +276,7 @@
                 <div>
                     {% if kot.prep_status == 'COMPLETED' %}
                         <span class="status-badge status-completed">
-                            🏁 {{ kot.get_prep_status_display }}
+                             {{ kot.get_prep_status_display }}
                         </span>
                     {% elif kot.prep_status == 'IN_PREPARATION' %}
                         <span class="status-badge status-preparing">

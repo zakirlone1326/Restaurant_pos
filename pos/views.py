@@ -18,11 +18,12 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model, authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 
 from .models import (
     Table, Order, Restaurant, MenuItem, MenuVariant, 
     OrderItem, Category, Expense, ExpenseCategory,
-    Employee, Attendance, SalaryPayment, UploadedMenu
+    Employee, Attendance, SalaryPayment, UploadedMenu, AddOn
 )
 from .utils import send_staff_notification
 
@@ -343,19 +344,75 @@ def live_orders(request):
 
     return render(request, 'pos/live_orders.html', context)
 
-
 def all_orders_view(request):
     orders = Order.objects.all().order_by('-created_at')
 
-    query = request.GET.get('q')
-    if query:
-        orders = orders.filter(
-            Q(id__icontains=query) | 
-            Q(customer_name__icontains=query) | 
-            Q(customer_phone__icontains=query) |
-            Q(delivery_address__icontains=query)
+    raw_query = request.GET.get('q', '').strip()
+    
+    if raw_query:
+        # Normalize search input
+        clean_query = raw_query.lower()
+        
+        # Base filter using Q object
+        search_filter = (
+            Q(customer_name__icontains=raw_query) | 
+            Q(customer_phone__icontains=raw_query) |
+            Q(delivery_address__icontains=raw_query)
         )
 
+        # 1. Handle Order ID (e.g., matching "180" even if user typed "ORD-180" or "ord-180")
+        digits_only = re.sub(r'\D', '', raw_query)
+        if digits_only:
+            search_filter |= Q(id__icontains=digits_only)
+
+        # 2. Handle Order Type ("Dine In", "Pickup", "Delivery")
+        if 'dine' in clean_query:
+            search_filter |= Q(order_type='DINE_IN')
+        elif 'pick' in clean_query:
+            search_filter |= Q(order_type='PICK_UP')
+        elif 'deliv' in clean_query:
+            search_filter |= Q(order_type='DELIVERY')
+        else:
+            search_filter |= Q(order_type__icontains=raw_query)
+
+        # 3. Handle Payment Status ("Paid", "Unpaid", "Pending")
+        if 'paid' in clean_query and 'unpaid' not in clean_query:
+            search_filter |= Q(payment_status='PAID')
+        elif 'unpaid' in clean_query:
+            search_filter |= Q(payment_status='UNPAID')
+        elif 'pend' in clean_query:
+            search_filter |= Q(payment_status='PENDING')
+        else:
+            search_filter |= Q(payment_status__icontains=raw_query)
+
+        # 4. Handle Payment Mode ("Cash", "UPI", "Online")
+        if 'cash' in clean_query:
+            search_filter |= Q(payment_mode='CASH')
+        elif 'upi' in clean_query or 'online' in clean_query:
+            search_filter |= Q(payment_mode='ONLINE')
+        else:
+            search_filter |= Q(payment_mode__icontains=raw_query)
+
+        # 5. Handle Status & Cancellation
+        if 'cancel' in clean_query:
+            search_filter |= Q(is_cancelled=True)
+        else:
+            search_filter |= Q(prep_status__icontains=raw_query)
+
+        # 6. Safe Numeric Total Check
+        try:
+            # Clean up currency symbols or extra spaces if present
+            clean_amount = raw_query.replace('₹', '').strip()
+            float_val = float(clean_amount)
+            search_filter |= Q(grand_total=float_val)
+        except ValueError:
+            # If input is text ("Paid", "Cash", etc.), safely ignore numeric search
+            pass
+
+        # Apply the composite filter
+        orders = orders.filter(search_filter)
+
+    # Date Filtering logic
     date_filter = request.GET.get('date_range', 'all')
     now = timezone.now()
     if date_filter == 'today':
@@ -370,6 +427,7 @@ def all_orders_view(request):
         last_month = (now.replace(day=1) - timedelta(days=1))
         orders = orders.filter(created_at__month=last_month.month, created_at__year=last_month.year)
 
+    # Statistics Aggregation
     stats = orders.filter(is_cancelled=False).aggregate(
         total_sum=Sum('grand_total'),
         total_count=Count('id'),
@@ -589,7 +647,7 @@ def billing_screen(request, table_id=None):
         'categories': categories,
         'restaurant_name': restaurant_name,
         'table': None,
-        'direct_order': None
+        'direct_order': None,
     }
     
     if table_id and str(table_id) != '0':
@@ -621,23 +679,33 @@ def billing_screen(request, table_id=None):
 @csrf_exempt
 @require_http_methods(["POST"])
 @transaction.atomic
+
 def add_item_to_order(request):
     try:
         table_id = request.POST.get('table_id')
         order_id = request.POST.get('order_id')
         variant_id = request.POST.get('variant_id')
+        notes = request.POST.get('notes', '').strip() # 🆕 Capture cooking instruction text
         
         if not variant_id:
             return JsonResponse({'error': 'Variant ID missing'}, status=400)
 
         variant = get_object_or_404(MenuVariant, id=variant_id)
         
+        # 🆕 Parse dynamic quantity value coming from modal ("3.00" -> float 3.0 -> int 3)
+        try:
+            quantity = int(float(request.POST.get('quantity', 1)))
+        except (ValueError, TypeError):
+            quantity = 1
+
         active_order = None
         if order_id:
             active_order = get_object_or_404(Order, id=order_id, is_cancelled=False)
         elif table_id and str(table_id) != '0':
             table = get_object_or_404(Table, id=table_id)
-            active_order = table.orders.filter(is_cancelled=False).exclude(payment_status='PAID').first()
+            active_order = table.orders.filter(is_cancelled=False).exclude(
+                Q(payment_status='PAID') | Q(payment_status='PENDING')
+            ).first()
             if not active_order:
                 active_order = Order.objects.create(
                     table=table, 
@@ -646,45 +714,67 @@ def add_item_to_order(request):
                     order_type='DINE_IN'
                 )
                 
-        
         if not active_order:
             return JsonResponse({'error': 'No active order context found'}, status=400)
 
+        # 🆕 Look up item considering notes, so items with different instructions remain distinct line items
         order_item, created = OrderItem.objects.get_or_create(
             order=active_order, 
             menu_variant=variant, 
+            notes=notes,
             is_cancelled=False,
-            defaults={'quantity': 1}
+            defaults={'quantity': quantity} # 🆕 Uses choice multiplier instead of fixed 1
         )
         
         if not created:
-            order_item.quantity += 1
+            order_item.quantity += quantity # 🆕 Increments by choice multiplier instead of fixed 1
             order_item.save()
+            
+        # 🆕 Handle Many-to-Many Add-on Selections from customizer popup modal
+        addon_ids_str = request.POST.get('addon_ids')
+        if addon_ids_str:
+            try:
+                addon_ids = json.loads(addon_ids_str)
+                # Clear existing items if adjusting an item, or just append chosen records
+                for addon_id in addon_ids:
+                    addon = AddOn.objects.get(id=addon_id)
+                    order_item.addons.add(addon)
+            except Exception:
+                pass
         
         active_order.update_totals(save=True)
-        return JsonResponse({'success': True, 'total': float(active_order.grand_total)})
+        return JsonResponse({
+            'success': True, 
+            'order_id': active_order.id, # Returns ID value to prevent dynamic state losses
+            'total': float(active_order.grand_total)
+        })
         
     except Exception as e:
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def delete_item(request):
     item_id = request.POST.get('item_id')
+    purge_all_raw = request.POST.get('purge_all', '').lower()
+    purge_all = purge_all_raw in ['true', '1', 'yes']
+
     order_item = get_object_or_404(OrderItem, id=item_id)
     order = order_item.order
-    
+
     if order.payment_status != 'PAID':
-        if order_item.quantity > 1:
+        if purge_all or order_item.quantity <= 1:
+            # Fix: Delete directly from QuerySet using id
+            OrderItem.objects.filter(id=item_id).delete()
+        else:
             order_item.quantity -= 1
             order_item.save()
-        else:
-            order_item.delete()
+
         order.update_totals()
         return JsonResponse({'success': True})
+
     return JsonResponse({'error': 'Cannot modify settled orders'}, status=400)
 
 
@@ -906,9 +996,11 @@ def admin_analytics(request):
 def get_order_status(request, table_id):
     order, _ = _get_active_order(table_id, request)
 
-    if not order:
+    # ❌ FIX: If no order is found, OR if the order is already settled/pending, clear the screen
+    if not order or order.payment_status in ['PAID', 'PENDING']:
         return JsonResponse({
-            'active': False
+            'active': False,
+            'items': []
         })
 
     items_list = []
@@ -1284,3 +1376,17 @@ def management_grid(request):
     return render(request, 'admin/management_grid.html', {
         'restaurant_name': res.name if res else "KOSHUR POS"
     })
+
+
+
+@staff_member_required
+def mark_order_paid(request, order_id):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, id=order_id)
+        payment_mode = request.POST.get('payment_mode') # Takes 'CASH' or 'ONLINE'
+        
+        order.payment_status = 'PAID'
+        order.payment_mode = payment_mode
+        order.save()
+        
+    return redirect(request.META.get('HTTP_REFERER', 'all_orders_route'))

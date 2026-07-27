@@ -66,7 +66,6 @@ class MenuItem(models.Model):
     description = models.TextField(blank=True)
     is_available = models.BooleanField(default=True)
     
-    # MERGED TRACKING RELATION FIELD LINK
     menu_file = models.ForeignKey(
         UploadedMenu, 
         on_delete=models.SET_NULL, 
@@ -85,6 +84,16 @@ class MenuVariant(models.Model):
     
     def __str__(self):
         return f"{self.menu_item.name} ({self.size_name}) - ₹{self.price}"
+
+class AddOn(models.Model):
+    """Stores available add-ons linked to a specific item (e.g., Extra Cheese, Extra Toppings)"""
+    menu_item = models.ForeignKey(MenuItem, related_name='addons', on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    is_available = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"+ {self.name} (₹{self.price}) for {self.menu_item.name}"
 
 # ==========================================
 # 🧾 CORE ORDER & BILLING (Kitchen Status Enabled)
@@ -178,11 +187,13 @@ class Order(models.Model):
         super().save(*args, **kwargs)
 
 # ==========================================
-# 🍽️ LINE ITEMS (KOT Support)
+# 🍽️ LINE ITEMS (With Add-ons & KOT Support)
 # ==========================================
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_variant = models.ForeignKey(MenuVariant, on_delete=models.PROTECT)
+    addons = models.ManyToManyField(AddOn, blank=True, related_name='ordered_items')
+    
     quantity = models.PositiveIntegerField(default=1)
     notes = models.TextField(blank=True, help_text="Cooking instructions (e.g., Less spicy)") 
     is_printed_to_kitchen = models.BooleanField(default=False)
@@ -193,10 +204,14 @@ class OrderItem(models.Model):
     def total_price(self):
         if self.is_cancelled:
             return Decimal('0.00')
-        return self.quantity * self.menu_variant.price
+        
+        addons_total = sum(addon.price for addon in self.addons.all())
+        unit_price = self.menu_variant.price + addons_total
+        return self.quantity * unit_price
 
     def __str__(self):
-        return f"{self.quantity} x {self.menu_variant.menu_item.name} ({'CANCELLED' if self.is_cancelled else 'ACTIVE'})"
+        addons_str = f" with {self.addons.count()} addons" if self.addons.exists() else ""
+        return f"{self.quantity} x {self.menu_variant.menu_item.name} ({self.menu_variant.size_name}){addons_str} ({'CANCELLED' if self.is_cancelled else 'ACTIVE'})"
 
 # ==========================================
 # 👥 STAFF MANAGEMENT

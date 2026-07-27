@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KOSHUR POS | {% if table %}Table {{ table.table_number }}{% else %}{{ direct_order.get_order_type_display }}{% endif %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-saffron: #f97316; /* Koshur POS Saffron Accent */
@@ -23,7 +24,7 @@
             height: 100vh; display: flex; flex-direction: column; overflow: hidden; 
             color: var(--text-main);
             
-            /* FIX 1: Prevent text selection globally across rapid layout click zones */
+            /* Prevent text selection globally across rapid layout click zones */
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
@@ -35,6 +36,20 @@
             display: flex; justify-content: space-between; align-items: center; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             border-bottom: 1px solid var(--border-color);
+        }
+
+        /* --- STYLING FOR KOSHUR POS HEADER BRANDING --- */
+        .brand-header-logo {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0px;
+            line-height: 1.2;
+            color: #ffffff; /* Default base text color */
+        }
+        .brand-header-logo .brand-saffron {
+            color: var(--primary-saffron);
         }
 
         .main-wrapper { display: flex; flex: 1; height: calc(100vh - 55px); overflow: hidden; }
@@ -81,8 +96,6 @@
             border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between;
             min-height: 80px; cursor: pointer; transition: box-shadow 0.2s, border-color 0.2s; position: relative;
             border-left: 3px solid var(--primary-saffron);
-            
-            /* FIX 1 Continued: Prevent textual highlighting on item click selection fields */
             user-select: none;
         }
         .food-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: var(--primary-saffron); }
@@ -150,13 +163,52 @@
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index: 1000; }
         .modal-content { background: white; padding: 20px; border-radius: 8px; width: 360px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         
-        .variant-selector-row { display: flex; flex-direction: column; gap: 8px; margin: 15px 0; }
-        .variant-option-label {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;
+        /* 🆕 STYLING ADVANCEMENTS FOR THE INTERACTIVE ITEM CUSTOMIZER PANEL */
+        .customizer-card {
+            background: white; padding: 24px; border-radius: 14px; width: 620px; max-width: 95%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15); font-family: 'Inter', sans-serif;
         }
-        .variant-option-label input { margin-right: 8px; accent-color: var(--primary-saffron); }
-        .variant-option-label.selected { border-color: var(--primary-saffron); background: #fff7ed; color: var(--primary-saffron); }
+        .customizer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .customizer-header h3 { margin: 0; font-size: 1.15rem; font-weight: 700; color: #1e293b; }
+        .customizer-qty-dock { display: flex; align-items: center; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 2px 6px; gap: 10px; }
+        
+        .instruction-section { margin-bottom: 16px; }
+        .instruction-input { width: 100%; border: none; border-bottom: 1px dashed var(--border-color); padding: 6px 0; font-size: 0.85rem; font-family: inherit; color: var(--text-main); }
+        .instruction-input:focus { outline: none; border-bottom-color: var(--primary-saffron); }
+
+        .variants-grid-row { display: flex; gap: 10px; margin: 12px 0 20px 0; flex-wrap: wrap; }
+        .variant-pill-btn {
+            flex: 1; min-width: 100px; padding: 10px 14px; border: 1px solid var(--border-color);
+            border-radius: 8px; text-align: center; font-weight: 700; cursor: pointer; background: #fff;
+            transition: all 0.15s; display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; color: #475569;
+        }
+        /* Updated variant pill activation design parameters from red to brand saffron accent style layout */
+        .variant-pill-btn.active { background: var(--primary-saffron); color: white; border-color: var(--primary-saffron); }
+        .variant-pill-btn .v-price-text { font-size: 0.8rem; font-weight: 600; opacity: 0.95; }
+
+        .addons-title-lbl { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; color: #1e293b; }
+        .addons-subtitle-lbl { font-size: 0.75rem; color: #64748b; margin-bottom: 10px; }
+        .addons-list-box { background: #fdfbf7; border-radius: 8px; border: 1px solid #fef3c7; padding: 2px 0; margin-bottom: 20px; max-height: 200px; overflow-y: auto; }
+        .addon-row-line { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #fef3c7; }
+        .addon-row-line:last-child { border-bottom: none; }
+        .addon-row-line span { font-size: 0.85rem; font-weight: 600; }
+        .addon-controls-right { display: flex; align-items: center; gap: 20px; }
+        .addon-price-tag { font-size: 0.85rem; font-weight: 700; color: #475569; min-width: 55px; text-align: right; }
+
+        .customizer-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+        /* Shifted running modal price tracker layout context from red to brand saffron color code */
+        .customizer-total-price { font-size: 1.3rem; font-weight: 800; color: var(--primary-saffron); }
+        .customizer-actions { display: flex; gap: 8px; }
+        .customizer-btn { padding: 10px 20px; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer; border: 1px solid var(--border-color); background: #fff; }
+        /* Shifted modal submission key element style configs from red to brand saffron color code */
+        .customizer-btn.submit-add-btn { background: var(--primary-saffron); color: white; border: none; }
+
+        /* 🆕 Clear Item quick delete cross styling rulesets */
+        .item-cross-purge-btn {
+            background: none; border: none; padding: 2px 6px; color: #94a3b8; font-weight: 700;
+            font-size: 0.85rem; cursor: pointer; transition: color 0.1s ease;
+        }
+        .item-cross-purge-btn:hover { color: var(--danger); }
 
         .pay-opt { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-weight: 700; cursor: pointer; text-align: left; background: #fff; }
         .pay-opt:hover { border-color: var(--primary-saffron); background: #fff7ed; }
@@ -183,8 +235,10 @@
                 {% if table %}TABLE {{ table.table_number }}{% else %}ORDER #{{ direct_order.id }} ({{ direct_order.get_order_type_display }}){% endif %}
             </h2>
         </div>
-       <span id="payment-status-tag" style="font-size: 0.75rem; font-weight: 800; background-color: var(--primary-saffron); color: #ffffff; padding: 6px 12px; border-radius: 4px; border: none; display: inline-block;">KOSHUR POS</span>
-     </header>
+        <span id="payment-status-tag" class="brand-header-logo" style="background-color: #0c1322; padding: 8px 16px; border-radius: 4px; display: inline-flex; align-items: center; letter-spacing: -0.5px;">
+            <span style="color: #ffffff; margin-right: 5px;">KOSHUR</span><span class="brand-saffron">POS</span>
+        </span>
+    </header>
 
     <div class="main-wrapper">
         <div class="left-main-deck">
@@ -208,22 +262,31 @@
                                     <div class="food-card" onclick="handleItemClick(this)" 
                                          data-item-id="{{ item.id }}" 
                                          data-item-name="{{ item.name }}" 
-                                         data-has-variants="{% if item.variants.count > 1 %}true{% else %}false{% endif %}"
-                                         {% if item.variants.count == 1 %}
+                                         data-is-customizable="{% if item.variants.count > 1 or item.addons.count > 0 %}true{% else %}false{% endif %}"
+                                         {% if item.variants.count == 1 and item.addons.count == 0 %}
                                             data-single-variant-id="{{ item.variants.first.id }}"
                                          {% endif %}>
                                         <h4>{{ item.name }}</h4>
                                         <div class="item-meta">
-                                            {% if item.variants.count > 1 %}
+                                            {% if item.variants.count > 1 or item.addons.count > 0 %}
                                                 Customizable
                                             {% else %}
                                                 ₹{{ item.variants.first.price }}
                                             {% endif %}
                                         </div>
+                                        
+                                        <!-- Embedded JSON metadata payloads for frontend access -->
                                         <script type="application/json" class="variants-data">
                                             [
                                                 {% for v in item.variants.all %}
-                                                    {"id": "{{ v.id }}", "size": "{{ v.size_name }}", "price": "{{ v.price }}"}{% if not forloop.last %},{% endif %}
+                                                    {"id": "{{ v.id }}", "size": "{{ v.size_name }}", "price": {{ v.price }}}{% if not forloop.last %},{% endif %}
+                                                {% endfor %}
+                                            ]
+                                        </script>
+                                        <script type="application/json" class="addons-data">
+                                            [
+                                                {% for a in item.addons.all %}
+                                                    {"id": "{{ a.id }}", "name": "{{ a.name }}", "price": {{ a.price }}}{% if not forloop.last %},{% endif %}
                                                 {% endfor %}
                                             ]
                                         </script>
@@ -271,13 +334,38 @@
         </aside>
     </div>
 
-    <div id="variantModal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 id="vmodal-title" style="margin-top:0; font-size:1.05rem;">Choose Options</h3>
-            <div class="variant-selector-row" id="vmodal-options-box"></div>
-            <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button id="vmodal-add-btn" class="settle-btn" style="flex:1; padding:10px;">Add Item</button>
-                <button onclick="closeModal('variantModal')" style="flex:1; background:none; border:1px solid var(--border-color); border-radius:6px; font-weight:600; cursor:pointer;">Cancel</button>
+    <!-- 🆕 ADVANCED ITEM CUSTOMIZATION MODAL -->
+    <div id="itemCustomizerModal" class="modal-overlay">
+        <div class="customizer-card">
+            <div class="customizer-header">
+                <h3 id="modal-product-title">Product Name</h3>
+                <div class="customizer-qty-dock">
+                    <button class="qty-btn" onclick="adjustModalParentQty(-1)">-</button>
+                    <span id="modal-parent-qty" style="font-weight:700; font-size:0.9rem; min-width:35px; text-align:center;">1.00</span>
+                    <button class="qty-btn" onclick="adjustModalParentQty(1)">+</button>
+                </div>
+            </div>
+
+            <div class="instruction-section">
+                <input type="text" id="modal-cooking-note" class="instruction-input" placeholder="Add cooking instruction (optional)">
+            </div>
+
+            <!-- Size Variants Render Block -->
+            <div class="variants-grid-row" id="modal-variants-box"></div>
+
+            <!-- Add-ons Selector Block -->
+            <div id="modal-addons-wrapper" style="display:none;">
+                <div class="addons-title-lbl" id="modal-addon-group-title">Add On Options</div>
+                <div class="addons-subtitle-lbl">( Select items as required )</div>
+                <div class="addons-list-box" id="modal-addons-box"></div>
+            </div>
+
+            <div class="customizer-footer">
+                <div id="modal-running-total" class="customizer-total-price">₹0.00</div>
+                <div class="customizer-actions">
+                    <button class="customizer-btn" onclick="closeModal('itemCustomizerModal')">Cancel</button>
+                    <button id="modal-submit-add-btn" class="customizer-btn submit-add-btn">Add</button>
+                </div>
             </div>
         </div>
     </div>
@@ -323,26 +411,29 @@
 
     <script>
         const tableId = "{{ table.id|default:'' }}";
-        const orderId = "{{ direct_order.id|default:'' }}";
-        
-        // Track the current active category ID to fallback gracefully when search is cleared
+        let currentActiveOrderId = "{{ direct_order.id|default:'' }}";
         let currentCategoryId = document.querySelector('.cat-item.active')?.dataset.catId || '';
 
+        // Dynamic global memory scope tracking modal configuration context
+        let modalActiveItemData = {
+            id: null,
+            quantity: 1,
+            variants: [],
+            addons: [],
+            selectedVariantId: null,
+            selectedAddons: {} // mapping {addonId: quantity}
+        };
+
         function showCategory(catId, btnElement) {
-            // Restore regular category view structure
             document.querySelectorAll('.category-grid').forEach(g => g.style.display = 'none');
             document.getElementById(catId).style.display = 'grid';
             document.querySelectorAll('.cat-item').forEach(btn => btn.classList.remove('active'));
             
             if (btnElement) {
                 btnElement.classList.add('active');
-                currentCategoryId = catId; // Remember choice
+                currentCategoryId = catId;
             }
-
-            // Restore complete standard display to inner elements inside the selected category grid wrapper
             document.querySelectorAll(`#${catId} .food-card`).forEach(card => card.style.display = 'flex');
-
-            // Clear search field when switching categories manually to avoid confusion
             document.getElementById('pos-search-input').value = '';
         }
 
@@ -351,70 +442,173 @@
         function handleItemClick(cardElement) {
             const itemId = cardElement.dataset.itemId;
             const itemName = cardElement.dataset.itemName;
-            const hasVariants = cardElement.dataset.hasVariants === "true";
+            const isCustomizable = cardElement.dataset.isCustomizable === "true";
 
-            if (!hasVariants) {
+            if (!isCustomizable) {
                 const variantId = cardElement.dataset.singleVariantId;
-                addFood(itemId, variantId);
+                addFood(itemId, variantId, 1, [], '');
             } else {
                 const variantsJSON = JSON.parse(cardElement.querySelector('.variants-data').textContent);
-                document.getElementById('vmodal-title').innerText = `Customize ${itemName}`;
-                const optionsContainer = document.getElementById('vmodal-options-box');
-                optionsContainer.innerHTML = '';
+                const addonsJSON = JSON.parse(cardElement.querySelector('.addons-data').textContent);
 
-                variantsJSON.forEach((v, index) => {
-                    const label = document.createElement('label');
-                    label.className = `variant-option-label ${index === 0 ? 'selected' : ''}`;
-                    label.innerHTML = `
-                        <span><input type="radio" name="selectedVariant" value="${v.id}" ${index === 0 ? 'checked' : ''} onchange="updateModalSelection(this)"> ${v.size}</span>
-                        <span>₹${v.price}</span>
-                    `;
-                    optionsContainer.appendChild(label);
-                });
+                modalActiveItemData.id = itemId;
+                modalActiveItemData.quantity = 1;
+                modalActiveItemData.variants = variantsJSON;
+                modalActiveItemData.addons = addonsJSON;
+                modalActiveItemData.selectedVariantId = variantsJSON.length > 0 ? variantsJSON[0].id : null;
+                
+                modalActiveItemData.selectedAddons = {};
+                addonsJSON.forEach(a => { modalActiveItemData.selectedAddons[a.id] = 0; });
 
-                document.getElementById('vmodal-add-btn').onclick = function() {
-                    const checkedRadio = document.querySelector('input[name="selectedVariant"]:checked');
-                    if (checkedRadio) {
-                        addFood(itemId, checkedRadio.value);
-                        closeModal('variantModal');
+                document.getElementById('modal-product-title').innerText = itemName;
+                document.getElementById('modal-cooking-note').value = '';
+                document.getElementById('modal-parent-qty').innerText = "1.00";
+
+                renderModalVariants();
+                renderModalAddons();
+                calculateModalTotal();
+
+                // Assign checkout handler to Add button
+                document.getElementById('modal-submit-add-btn').onclick = function() {
+                    const activeAddonsList = [];
+                    for (const [id, qty] of Object.entries(modalActiveItemData.selectedAddons)) {
+                        if (qty > 0) {
+                            for (let step = 0; step < qty; step++) {
+                                activeAddonsList.push(parseInt(id));
+                            }
+                        }
                     }
+                    const noteStr = document.getElementById('modal-cooking-note').value.trim();
+                    
+                    // FIXED: Passes modalActiveItemData.quantity instead of hardcoded 1
+                    addFood(
+                        modalActiveItemData.id, 
+                        modalActiveItemData.selectedVariantId, 
+                        modalActiveItemData.quantity, 
+                        activeAddonsList, 
+                        noteStr
+                    );
+                    closeModal('itemCustomizerModal');
                 };
-                document.getElementById('variantModal').style.display = 'flex';
+
+                document.getElementById('itemCustomizerModal').style.display = 'flex';
             }
         }
 
-        function updateModalSelection(radioElement) {
-            document.querySelectorAll('.variant-option-label').forEach(lbl => lbl.classList.remove('selected'));
-            radioElement.closest('.variant-option-label').classList.add('selected');
+        function renderModalVariants() {
+            const container = document.getElementById('modal-variants-box');
+            container.innerHTML = '';
+            
+            modalActiveItemData.variants.forEach(v => {
+                const btn = document.createElement('div');
+                btn.className = `variant-pill-btn ${v.id == modalActiveItemData.selectedVariantId ? 'active' : ''}`;
+                btn.onclick = () => {
+                    modalActiveItemData.selectedVariantId = v.id;
+                    renderModalVariants();
+                    calculateModalTotal();
+                };
+                btn.innerHTML = `
+                    <span>${v.size}</span>
+                    <span class="v-price-text">₹${parseFloat(v.price).toFixed(2)}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function renderModalAddons() {
+            const wrapper = document.getElementById('modal-addons-wrapper');
+            const container = document.getElementById('modal-addons-box');
+            container.innerHTML = '';
+
+            if (modalActiveItemData.addons.length === 0) {
+                wrapper.style.display = 'none';
+                return;
+            }
+
+            wrapper.style.display = 'block';
+            modalActiveItemData.addons.forEach(a => {
+                const currentQty = modalActiveItemData.selectedAddons[a.id] || 0;
+                
+                const row = document.createElement('div');
+                row.className = 'addon-row-line';
+                row.innerHTML = `
+                    <span>${a.name}</span>
+                    <div class="addon-controls-right">
+                        <span class="addon-price-tag">₹${parseFloat(a.price).toFixed(2)}</span>
+                        <div class="qty-controls" style="margin-top:0;">
+                            <button class="qty-btn" onclick="adjustModalAddonQty(${a.id}, -1)">-</button>
+                            <span style="font-weight:600; font-size:0.85rem; min-width:15px; text-align:center;">${currentQty}</span>
+                            <button class="qty-btn" onclick="adjustModalAddonQty(${a.id}, 1)">+</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function adjustModalParentQty(change) {
+            modalActiveItemData.quantity = Math.max(1, modalActiveItemData.quantity + change);
+            document.getElementById('modal-parent-qty').innerText = modalActiveItemData.quantity.toFixed(2);
+            calculateModalTotal();
+        }
+
+        function adjustModalAddonQty(addonId, change) {
+            let currentQty = modalActiveItemData.selectedAddons[addonId] || 0;
+            modalActiveItemData.selectedAddons[addonId] = Math.max(0, currentQty + change);
+            renderModalAddons();
+            calculateModalTotal();
+        }
+
+        function calculateModalTotal() {
+            let basePrice = 0;
+            const variantObj = modalActiveItemData.variants.find(v => v.id == modalActiveItemData.selectedVariantId);
+            if (variantObj) {
+                basePrice = parseFloat(variantObj.price);
+            }
+
+            let addonsPriceSum = 0;
+            modalActiveItemData.addons.forEach(a => {
+                const qty = modalActiveItemData.selectedAddons[a.id] || 0;
+                addonsPriceSum += (parseFloat(a.price) * qty);
+            });
+
+            const grandRunningSum = (basePrice + addonsPriceSum) * modalActiveItemData.quantity;
+            document.getElementById('modal-running-total').innerText = `₹${grandRunningSum.toFixed(2)}`;
         }
 
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('qty-btn-plus')) {
                 const p = e.target.closest('.bill-row');
-                if (p) addFood(p.dataset.itemId, p.dataset.variantId);
+                if (p) addFood(p.dataset.itemId, p.dataset.variantId, 1, [], '');
             }
             if (e.target.classList.contains('qty-btn-minus')) {
                 const p = e.target.closest('.bill-row');
+                // FIXED: Changed p.dataset.itemId to target the operational database entry row record ID key (p.dataset.id)
                 if (p) changeQty(p.dataset.id);
             }
         });
 
+        // 🆕 Fast Remove Entry via Cross Button click handler
+        async function purgeCartRowCompletely(orderItemId) {
+            if(confirm("Are you sure you want to remove this item entry from the cart?")) {
+                const fd = new FormData();
+                fd.append('item_id', orderItemId);
+                fd.append('purge_all', 'true'); // Tells backend code to clear out the object line item instantly
+                await fetch('/delete-item/', { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
+                syncOrder();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             syncOrder();
             
-            // Set initial fallback category tracking
             const activeBtn = document.querySelector('.cat-item.active');
-            if (activeBtn) {
-                currentCategoryId = activeBtn.dataset.catId;
-            }
+            if (activeBtn) { currentCategoryId = activeBtn.dataset.catId; }
 
             const searchInput = document.getElementById('pos-search-input');
-            if(searchInput) {
-                searchInput.addEventListener('input', filterFoodItems);
-            }
+            if(searchInput) { searchInput.addEventListener('input', filterFoodItems); }
         });
 
-        // 🟢 FIX: Global un-scoped real-time filter action
         function filterFoodItems() {
             const query = document.getElementById('pos-search-input').value.toLowerCase().trim();
             const foodCards = document.querySelectorAll('.food-card');
@@ -422,7 +616,6 @@
             const categoryButtons = document.querySelectorAll('.cat-item');
 
             if (query === "") {
-                // If search input is cleared, recover the standard segmented view framework smoothly
                 if (currentCategoryId) {
                     const activeBtn = document.querySelector(`.cat-item[data-cat-id="${currentCategoryId}"]`);
                     showCategory(currentCategoryId, activeBtn);
@@ -430,15 +623,9 @@
                 return;
             }
 
-            // GLOBAL SEARCH ACTIVE: Strip out current active categories sidebar styles temporarily
             categoryButtons.forEach(btn => btn.classList.remove('active'));
+            categoryGrids.forEach(grid => { grid.style.display = 'grid'; });
 
-            // Force display grids layout open so items across any grid wrapper display simultaneously
-            categoryGrids.forEach(grid => {
-                grid.style.display = 'grid';
-            });
-
-            // Iterate matching parameters globally
             foodCards.forEach(card => {
                 const itemName = card.dataset.itemName ? card.dataset.itemName.toLowerCase() : '';
                 const h4Text = card.querySelector('h4') ? card.querySelector('h4').innerText.toLowerCase() : '';
@@ -451,12 +638,25 @@
             });
         }
         
-        async function addFood(itemId, variantId) {
+        async function addFood(itemId, variantId, qty = 1, addonIds = [], notesStr = '') {
+            const listContainer = document.getElementById('order-list');
+            
+            if (tableId && listContainer && listContainer.innerText.includes('Empty Cart')) {
+                currentActiveOrderId = '';
+            }
+
             const fd = new FormData();
             if (tableId) fd.append('table_id', tableId);
-            if (orderId) fd.append('order_id', orderId);
+            if (currentActiveOrderId) { fd.append('order_id', currentActiveOrderId); }
+            
             fd.append('menu_item_id', itemId);
             fd.append('variant_id', variantId);
+            fd.append('quantity', qty);
+            fd.append('notes', notesStr);
+            
+            if (addonIds.length > 0) {
+                fd.append('addon_ids', JSON.stringify(addonIds));
+            }
             
             try {
                 const response = await fetch('/add-item/', { 
@@ -464,33 +664,48 @@
                     headers: {'X-CSRFToken': getCSRF()}, 
                     body: fd 
                 });
+                const responseData = await response.json();
+                
+                if (responseData.success && responseData.order_id) {
+                    currentActiveOrderId = responseData.order_id;
+                }
                 if (response.ok) syncOrder();
-            } catch (error) { console.error("Error adding food:", error); }
+            } catch (error) { console.error("Error adding food line entry:", error); }
         }
 
         async function syncOrder() {
-            const url = tableId ? `/table/${tableId}/status/` : `/table/0/status/?order_id=${orderId}`;
+            const url = tableId ? `/table/${tableId}/status/` : `/table/0/status/?order_id=${currentActiveOrderId}`;
             const res = await fetch(url);
             const data = await res.json();
             const list = document.getElementById('order-list');
             const tag = document.getElementById('payment-status-tag');
             
-            if(!data.active || !data.items || data.items.length === 0) {
+            if(!data.items || data.items.length === 0) {
                 list.innerHTML = '<div style="text-align:center; color:#94a3b8; margin-top:50px; font-size:0.85rem;">Empty Cart</div>';
                 document.getElementById('total-val').innerText = '₹0.00';
                 return;
             }
 
-            tag.innerText = data.payment_status === 'PENDING' ? "PAYMENT PENDING" : "KOSHUR POS";
-            tag.style.background = data.payment_status === 'PENDING' ? "var(--pending)" : "none";
-            tag.style.color = data.payment_status === 'PENDING' ? "#fff" : "#64748b";
+            if (data.payment_status === 'PENDING') {
+                tag.innerText = "PAYMENT PENDING";
+                tag.style.background = "var(--pending)";
+                tag.style.color = "#fff";
+            } else {
+                tag.innerHTML = '<span style="color: #ffffff; margin-right: 5px;">KOSHUR</span><span class="brand-saffron">POS</span>';
+                tag.style.background = "#0c1322";
+            }
 
+            // FIXED: Appends a dedicated item-cross-purge-btn clear element on cart item list generation templates
             list.innerHTML = data.items.map(i => `
             <div class="bill-row" data-id="${i.id}" data-item-id="${i.menu_item_id}" data-variant-id="${i.variant_id}">
                 <div class="item-name-row">
                     <span>${i.name} <small style="color: #64748b; font-weight: 400; font-size: 0.75rem;">(${i.variant_name || 'Standard'})</small></span>
-                    <span>₹${i.price}</span>
+                    <div style="display:inline-flex; align-items:center; gap:8px;">
+                        <span>₹${parseFloat(i.price).toFixed(2)}</span>
+                        <button class="item-cross-purge-btn" onclick="purgeCartRowCompletely(${i.id})" title="Remove item entry entirely from row">✕</button>
+                    </div>
                 </div>
+                ${i.addons && i.addons.length > 0 ? `<div style="font-size:0.7rem; color:#f97316; font-weight:600; margin-bottom:4px;">+ ${i.addons.map(a => a.name).join(', ')}</div>` : ''}
                 <div class="qty-controls">
                     <button class="qty-btn qty-btn-minus">-</button>
                     <span style="font-weight:600; min-width:20px; text-align:center; font-size:0.85rem;">${i.qty}</span>
@@ -511,7 +726,7 @@
         }
 
         async function toggleGST() {
-            const targetUrl = tableId ? `/table/${tableId}/toggle-gst/` : `/table/0/toggle-gst/?order_id=${orderId}`;
+            const targetUrl = tableId ? `/table/${tableId}/toggle-gst/` : `/table/0/toggle-gst/?order_id=${currentActiveOrderId}`;
             await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()} });
             syncOrder();
         }
@@ -524,16 +739,20 @@
             const fd = new FormData();
             if (mode !== 'PENDING') fd.append('payment_mode', mode);
             fd.append('payment_status', mode === 'PENDING' ? 'PENDING' : 'PAID');
-            const targetUrl = tableId ? `/table/${tableId}/settle/` : `/table/0/settle/?order_id=${orderId}`;
+            const targetUrl = tableId ? `/table/${tableId}/settle/` : `/table/0/settle/?order_id=${currentActiveOrderId}`;
             const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
-            if(res.ok) window.location.href = "{% url 'table_dashboard' %}";
+            
+            if(res.ok) {
+                currentActiveOrderId = ''; 
+                window.location.href = "{% url 'table_dashboard' %}";
+            }
         }
 
         async function applyDiscount() {
             const fd = new FormData();
             fd.append('discount_value', document.getElementById('discount-val').value);
             fd.append('discount_type', document.getElementById('discount-type').value);
-            const targetUrl = tableId ? `/table/${tableId}/apply-discount/` : `/table/0/apply-discount/?order_id=${orderId}`;
+            const targetUrl = tableId ? `/table/${tableId}/apply-discount/` : `/table/0/apply-discount/?order_id=${currentActiveOrderId}`;
             const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) { closeModal('discountModal'); syncOrder(); }
         }
@@ -549,18 +768,18 @@
                 alert("Please type a reason for cancellation."); 
                 return;
             }
-            
             const fd = new FormData();
             fd.append('cancel_reason', reason);
-            const targetUrl = tableId ? `/table/${tableId}/cancel-order/` : `/table/0/cancel-order/?order_id=${orderId}`;
+            const targetUrl = tableId ? `/table/${tableId}/cancel-order/` : `/table/0/cancel-order/?order_id=${currentActiveOrderId}`;
             const res = await fetch(targetUrl, { method: 'POST', headers: {'X-CSRFToken': getCSRF()}, body: fd });
             if(res.ok) {
+                currentActiveOrderId = '';
                 window.location.href = '/table/';
             }
         }
 
-        function printKOT() { const targetUrl = tableId ? `/table/${tableId}/print-kot/` : `/table/0/print-kot/?order_id=${orderId}`; window.open(targetUrl); }
-        function printBill() { const targetUrl = tableId ? `/table/${tableId}/print-invoice/` : `/table/0/print-invoice/?order_id=${orderId}`; window.open(targetUrl, '_blank'); }
+        function printKOT() { const targetUrl = tableId ? `/table/${tableId}/print-kot/` : `/table/0/print-kot/?order_id=${currentActiveOrderId}`; window.open(targetUrl); }
+        function printBill() { const targetUrl = tableId ? `/table/${tableId}/print-invoice/` : `/table/0/print-invoice/?order_id=${currentActiveOrderId}`; window.open(targetUrl, '_blank'); }
     </script>
 </body>
 </html>
